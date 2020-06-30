@@ -8,7 +8,7 @@ The Dashboard incorporates two components of TORCH:
 
 * The **TOSCA Modeller**, whch is a Vue.js component available [here](resources/js/components/ToscaGraphModeler.vue).
 
-* The **TOSCA Processor**, which is a Python-based component available [here](public/json4tosca-parse).
+* The **TOSCA Processor**, which is a Python-based component available [here](public/json4tosca-parser).
 
 ## Requirements
 

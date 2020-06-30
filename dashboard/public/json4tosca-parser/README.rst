@@ -1,3 +1,9 @@
+===============
+TOSCA Processor
+===============
+
+The TOSCA Processor is an extension of the original `OpenStack TOSCA Parser <https://github.com/openstack/tosca-parser>`_.
+
 ========================
 Team and repository tags
 ========================
@@ -40,11 +46,6 @@ entity_type.py module is a parent of all type elements. The toscaparser
 directory contains various python module to handle service template including
 topology template, node templates, relationship templates etc. The
 entity_template.py is a parent of all template elements.
-
-
-How To Use
-----------
-Please refer to `doc/source/usage.rst <https://github.com/openstack/tosca-parser/blob/master/doc/source/usage.rst>`_
 
 Project Info
 ------------
