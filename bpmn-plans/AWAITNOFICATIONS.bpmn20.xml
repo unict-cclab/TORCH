@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:flowable="http://flowable.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" typeLanguage="http://www.w3.org/2001/XMLSchema" expressionLanguage="http://www.w3.org/1999/XPath" targetNamespace="http://www.signavio.com">
+  <process id="awaitnotifications" name="AWAITNOFICATIONS" isExecutable="true">
+    <extensionElements>
+      <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+        <flowable:field name="language">
+          <flowable:string><![CDATA[groovy]]></flowable:string>
+        </flowable:field>
+        <flowable:field name="script">
+          <flowable:string><![CDATA[import it.unict.bpmn4tosca.model.Node;
+
+Node node = execution.getVariable('node');
+println "Await Notifications [" + node.getName() + " - START]: " + execution.getProcessInstanceBusinessKey();
+println "Requirements: " + execution.getVariable('requirements');]]></flowable:string>
+        </flowable:field>
+      </flowable:executionListener>
+      <flowable:executionListener event="end" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+        <flowable:field name="language">
+          <flowable:string><![CDATA[groovy]]></flowable:string>
+        </flowable:field>
+        <flowable:field name="script">
+          <flowable:string><![CDATA[println "Await Notifications [" + execution.getVariable('node').getName() + " - END]: " + execution.getProcessInstanceBusinessKey();
+
+println "globalMap: " + execution.getVariable('globalMap');]]></flowable:string>
+        </flowable:field>
+      </flowable:executionListener>
+    </extensionElements>
+    <startEvent id="sid-D2A2D6F0-6C53-4E82-BC39-0ED7F2566611"></startEvent>
+    <endEvent id="sid-A72C8B2D-F58B-48E8-9444-2505E28A58FA"></endEvent>
+    <subProcess id="sid-3B943E0F-5AEF-4B17-AEE9-14C9A47081AB" name="subProcess">
+      <multiInstanceLoopCharacteristics isSequential="false" flowable:collection="requirements" flowable:elementVariable="requirement"></multiInstanceLoopCharacteristics>
+      <callActivity id="sid-6F271227-EEA7-4788-9577-F6456C5B0844" name="receive message" calledElement="receiveMessage" flowable:calledElementType="key" flowable:inheritBusinessKey="true" flowable:useLocalScopeForOutParameters="true">
+        <extensionElements>
+          <flowable:in source="requirement" target="message"></flowable:in>
+          <flowable:out source="localMap" target="localMap"></flowable:out>
+        </extensionElements>
+      </callActivity>
+      <startEvent id="sid-1E9CA8C0-2975-42EA-BF2A-2AF5BE93F824"></startEvent>
+      <scriptTask id="sid-23B3676D-6F0A-4D8F-AB1E-1B40A0C2141C" name="merge" scriptFormat="groovy" flowable:autoStoreVariables="false">
+        <script><![CDATA[Map<String, Map<String, Object>> globalMap = execution.getVariable('globalMap');
+
+Map<String, Map<String, Object>> localMap = execution.getVariable('localMap');
+
+println "localMap [" + execution.getVariable('node').getName() + "-" + execution.getVariable('requirement') + "]: " + localMap;
+
+// Merge di localMap in globalMap
+globalMap.putAll(localMap);
+execution.setVariable('globalMap', globalMap);]]></script>
+      </scriptTask>
+      <endEvent id="sid-63F4F99E-90EB-4EA6-B44B-CBE6389F1BE3"></endEvent>
+      <sequenceFlow id="sid-169BD9B9-82E6-4CF0-B712-8B52C85BFE09" sourceRef="sid-1E9CA8C0-2975-42EA-BF2A-2AF5BE93F824" targetRef="sid-6F271227-EEA7-4788-9577-F6456C5B0844"></sequenceFlow>
+      <sequenceFlow id="sid-7CD66432-4A3C-4400-BBF3-25DC45DDDDA5" sourceRef="sid-6F271227-EEA7-4788-9577-F6456C5B0844" targetRef="sid-23B3676D-6F0A-4D8F-AB1E-1B40A0C2141C"></sequenceFlow>
+      <sequenceFlow id="sid-73DBD1AD-AE9D-4721-B8F1-24CD4C4A54D4" sourceRef="sid-23B3676D-6F0A-4D8F-AB1E-1B40A0C2141C" targetRef="sid-63F4F99E-90EB-4EA6-B44B-CBE6389F1BE3"></sequenceFlow>
+    </subProcess>
+    <sequenceFlow id="sid-AC1F47CF-EBCD-4943-B4F3-19FCE2399EA8" sourceRef="sid-3B943E0F-5AEF-4B17-AEE9-14C9A47081AB" targetRef="sid-A72C8B2D-F58B-48E8-9444-2505E28A58FA"></sequenceFlow>
+    <sequenceFlow id="sid-EB86E57E-0363-430F-85DF-55CA32D22BE8" sourceRef="sid-D2A2D6F0-6C53-4E82-BC39-0ED7F2566611" targetRef="sid-3B943E0F-5AEF-4B17-AEE9-14C9A47081AB"></sequenceFlow>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_awaitnotifications">
+    <bpmndi:BPMNPlane bpmnElement="awaitnotifications" id="BPMNPlane_awaitnotifications">
+      <bpmndi:BPMNShape bpmnElement="sid-D2A2D6F0-6C53-4E82-BC39-0ED7F2566611" id="BPMNShape_sid-D2A2D6F0-6C53-4E82-BC39-0ED7F2566611">
+        <omgdc:Bounds height="30.0" width="30.0" x="34.5" y="112.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-A72C8B2D-F58B-48E8-9444-2505E28A58FA" id="BPMNShape_sid-A72C8B2D-F58B-48E8-9444-2505E28A58FA">
+        <omgdc:Bounds height="28.0" width="28.0" x="660.0" y="113.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-3B943E0F-5AEF-4B17-AEE9-14C9A47081AB" id="BPMNShape_sid-3B943E0F-5AEF-4B17-AEE9-14C9A47081AB">
+        <omgdc:Bounds height="151.0" width="486.0" x="120.0" y="45.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-6F271227-EEA7-4788-9577-F6456C5B0844" id="BPMNShape_sid-6F271227-EEA7-4788-9577-F6456C5B0844">
+        <omgdc:Bounds height="80.0" width="100.0" x="240.0" y="87.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-1E9CA8C0-2975-42EA-BF2A-2AF5BE93F824" id="BPMNShape_sid-1E9CA8C0-2975-42EA-BF2A-2AF5BE93F824">
+        <omgdc:Bounds height="30.0" width="30.0" x="159.0" y="112.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-23B3676D-6F0A-4D8F-AB1E-1B40A0C2141C" id="BPMNShape_sid-23B3676D-6F0A-4D8F-AB1E-1B40A0C2141C">
+        <omgdc:Bounds height="80.0" width="100.0" x="385.0" y="87.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-63F4F99E-90EB-4EA6-B44B-CBE6389F1BE3" id="BPMNShape_sid-63F4F99E-90EB-4EA6-B44B-CBE6389F1BE3">
+        <omgdc:Bounds height="28.0" width="28.0" x="530.0" y="113.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="sid-EB86E57E-0363-430F-85DF-55CA32D22BE8" id="BPMNEdge_sid-EB86E57E-0363-430F-85DF-55CA32D22BE8">
+        <omgdi:waypoint x="64.44685178112138" y="126.68906070769424"></omgdi:waypoint>
+        <omgdi:waypoint x="119.99999999999994" y="125.5372408293461"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-7CD66432-4A3C-4400-BBF3-25DC45DDDDA5" id="BPMNEdge_sid-7CD66432-4A3C-4400-BBF3-25DC45DDDDA5">
+        <omgdi:waypoint x="339.95000000000005" y="127.0"></omgdi:waypoint>
+        <omgdi:waypoint x="385.0" y="127.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-AC1F47CF-EBCD-4943-B4F3-19FCE2399EA8" id="BPMNEdge_sid-AC1F47CF-EBCD-4943-B4F3-19FCE2399EA8">
+        <omgdi:waypoint x="605.9499999999995" y="125.57773311897105"></omgdi:waypoint>
+        <omgdi:waypoint x="660.0021146396635" y="126.70745811227431"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-169BD9B9-82E6-4CF0-B712-8B52C85BFE09" id="BPMNEdge_sid-169BD9B9-82E6-4CF0-B712-8B52C85BFE09">
+        <omgdi:waypoint x="188.94999864206383" y="127.0"></omgdi:waypoint>
+        <omgdi:waypoint x="240.0" y="127.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-73DBD1AD-AE9D-4721-B8F1-24CD4C4A54D4" id="BPMNEdge_sid-73DBD1AD-AE9D-4721-B8F1-24CD4C4A54D4">
+        <omgdi:waypoint x="484.95000000000005" y="127.0"></omgdi:waypoint>
+        <omgdi:waypoint x="530.0" y="127.0"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

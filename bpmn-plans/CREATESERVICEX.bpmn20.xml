@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:flowable="http://flowable.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" typeLanguage="http://www.w3.org/2001/XMLSchema" expressionLanguage="http://www.w3.org/1999/XPath" targetNamespace="http://www.signavio.com">
+  <process id="createservicex" name="CREATESERVICEX" isExecutable="true">
+    <extensionElements>
+      <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+        <flowable:field name="language">
+          <flowable:string><![CDATA[groovy]]></flowable:string>
+        </flowable:field>
+        <flowable:field name="script">
+          <flowable:string><![CDATA[import java.util.concurrent.ConcurrentHashMap;
+
+println "CreateService Business Key:  " + execution.getProcessInstanceBusinessKey();
+
+Map<String, Map<String, Object>> globalMap = new ConcurrentHashMap<String, Map<String, Object>>();
+execution.setVariable('globalMap', globalMap);]]></flowable:string>
+        </flowable:field>
+      </flowable:executionListener>
+      <flowable:executionListener event="end" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+        <flowable:field name="language">
+          <flowable:string><![CDATA[groovy]]></flowable:string>
+        </flowable:field>
+        <flowable:field name="script">
+          <flowable:string><![CDATA[println "Process instance end"]]></flowable:string>
+        </flowable:field>
+      </flowable:executionListener>
+    </extensionElements>
+    <scriptTask id="sid-CF388E07-F511-4098-9942-2BA3736051B2" name="decrement retry counter" scriptFormat="groovy" flowable:autoStoreVariables="false">
+      <script><![CDATA[execution.setVariable('retryCounter', retryCounter - 1);
+println "Cloud Service [" + execution.getVariable('node').name + "]: retryCounter-1 --> " + execution.getVariable('retryCounter');]]></script>
+    </scriptTask>
+    <exclusiveGateway id="sid-1CE4223D-D424-4121-926A-355E3C120DEE" name="retry?" default="sid-5682A6AB-ADC0-4680-BAA9-456E3C15E06B"></exclusiveGateway>
+    <subProcess id="sid-79B5A343-7B2F-49ED-B469-F90CC11B5D96" name="wait until created">
+      <extensionElements>
+        <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+          <flowable:field name="language">
+            <flowable:string><![CDATA[groovy]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="script">
+            <flowable:string><![CDATA[import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import it.unict.bpmn4tosca.model.Node;
+
+ObjectMapper mapper = new ObjectMapper();
+JsonNode jsonNode = mapper.readTree(execution.getVariable('createResourceResponseBody'));
+Node node = execution.getVariable('node');
+
+if (node.getCategory().equals(Node.Category.CLUSTER.value())) {
+   execution.setVariable('checkResourceURI', execution.getVariable('serviceBrokerURI') + "/resources/" + node.getCategory() + ":" + node.getProperties().get("platform") + "/" + jsonNode.get("id").asText());
+} else {
+   execution.setVariable('checkResourceURI', execution.getVariable('serviceBrokerURI') + "/resources/" + node.getCategory() + "/" + jsonNode.get("id").asText());
+}]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
+        <flowable:executionListener event="end" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+          <flowable:field name="language">
+            <flowable:string><![CDATA[groovy]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="script">
+            <flowable:string><![CDATA[import it.unict.bpmn4tosca.model.Node;
+import com.fasterxml.jackson.databind.JsonNode;
+
+JsonNode checkResourceResponse = execution.getVariable('checkResourceResponse');
+Map<String, Map<String, Object>> globalMap = execution.getVariable('globalMap');
+Node node = execution.getVariable('node');
+
+if(node.getCategory().equals(Node.Category.VM.value())) {
+   Map<String, Object> vm = new HashMap<String, Object>();
+   vm.put(node.getName() + ".username", "ubuntu");
+   vm.put(node.getName() + ".address", checkResourceResponse.get('addresses').get(0).get('ips').get(0).asText());
+     globalMap.put(node.getName(), vm);   execution.setVariable('globalMap', globalMap);
+} else if (node.getCategory().equals(Node.Category.CLUSTER.value())) {
+   Map<String, Object> cluster = new HashMap<String, Object>();
+   cluster.put("platform", node.getProperties().get("platform"));
+   cluster.put("cluster.endpoint", checkResourceResponse.get('endpoint').asText());
+
+   if (checkResourceResponse.get('pem') != null && checkResourceResponse.get('cert') != null && checkResourceResponse.get('rsa') != null) {
+      cluster.put("cluster.pem", checkResourceResponse.get('pem').asText());
+      cluster.put("cluster.cert", checkResourceResponse.get('cert').asText());
+      cluster.put("cluster.rsa", checkResourceResponse.get('rsa').asText());
+   }
+   globalMap.put(node.getName(), cluster);
+   execution.setVariable('globalMap', globalMap);
+}]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
+      </extensionElements>
+      <exclusiveGateway id="sid-693B5289-85B1-41D3-B374-569238537A2D" default="sid-D040A110-20A8-453F-9545-A9BCCC4B5F05"></exclusiveGateway>
+      <startEvent id="sid-26520EED-4A8C-403A-9EE4-7CD9C28A2610"></startEvent>
+      <endEvent id="sid-639C26E2-0D59-49C5-BCCB-E03A8B656D70" name="create error">
+        <errorEventDefinition errorRef="createError"></errorEventDefinition>
+      </endEvent>
+      <endEvent id="sid-42B5FF82-F783-4E59-9750-FD8F439A69AC"></endEvent>
+      <exclusiveGateway id="sid-960B0271-8046-4823-8005-8C59D7D32619"></exclusiveGateway>
+      <serviceTask id="sid-85EBAFA5-824F-47F1-872B-0FF55503A3CE" name="check  create status" flowable:type="http">
+        <extensionElements>
+          <flowable:field name="requestMethod">
+            <flowable:string><![CDATA[GET]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="requestUrl">
+            <flowable:expression><![CDATA[${checkResourceURI}]]></flowable:expression>
+          </flowable:field>
+          <flowable:field name="requestHeaders">
+            <flowable:string><![CDATA[Content-Type: application/json]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="handleStatusCodes">
+            <flowable:string><![CDATA[4XX,5XX]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="saveResponseParameters">
+            <flowable:string><![CDATA[true]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="resultVariablePrefix">
+            <flowable:string><![CDATA[checkResource]]></flowable:string>
+          </flowable:field>
+          <flowable:executionListener event="end" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+            <flowable:field name="language">
+              <flowable:string><![CDATA[groovy]]></flowable:string>
+            </flowable:field>
+            <flowable:field name="script">
+              <flowable:string><![CDATA[import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+
+ObjectMapper mapper = new ObjectMapper();
+JsonNode checkResourceResponse = mapper.readTree(execution.getVariable('checkResourceResponseBody'));
+
+execution.setVariable('checkResourceResponse', checkResourceResponse);
+execution.setVariable('resourceStatus', checkResourceResponse.get('status').asText());
+
+println "Resource response: " + execution.getVariable('checkResourceResponseBody');]]></flowable:string>
+            </flowable:field>
+          </flowable:executionListener>
+        </extensionElements>
+      </serviceTask>
+      <intermediateCatchEvent id="sid-69DD5ED8-1872-4011-B2DA-AF30C0A0C03C" name="check period">
+        <timerEventDefinition>
+          <timeDuration>${checkPeriod}</timeDuration>
+        </timerEventDefinition>
+      </intermediateCatchEvent>
+      <boundaryEvent id="sid-0C01A850-9116-4F72-950C-97A9812DCAED" name="any error" attachedToRef="sid-85EBAFA5-824F-47F1-872B-0FF55503A3CE">
+        <errorEventDefinition></errorEventDefinition>
+      </boundaryEvent>
+      <sequenceFlow id="sid-508559D5-C4CA-4FE2-92D7-82A301C8BEF2" sourceRef="sid-69DD5ED8-1872-4011-B2DA-AF30C0A0C03C" targetRef="sid-960B0271-8046-4823-8005-8C59D7D32619"></sequenceFlow>
+      <sequenceFlow id="sid-2B82474F-D91B-4839-AE83-4379B0750D4F" sourceRef="sid-0C01A850-9116-4F72-950C-97A9812DCAED" targetRef="sid-639C26E2-0D59-49C5-BCCB-E03A8B656D70">
+        <extensionElements>
+          <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+            <flowable:field name="language">
+              <flowable:string><![CDATA[groovy]]></flowable:string>
+            </flowable:field>
+            <flowable:field name="script">
+              <flowable:string><![CDATA[println "Node: " + execution.getVariable('node').name + " --> Create Error thrown";]]></flowable:string>
+            </flowable:field>
+          </flowable:executionListener>
+        </extensionElements>
+      </sequenceFlow>
+      <sequenceFlow id="sid-D040A110-20A8-453F-9545-A9BCCC4B5F05" sourceRef="sid-693B5289-85B1-41D3-B374-569238537A2D" targetRef="sid-42B5FF82-F783-4E59-9750-FD8F439A69AC"></sequenceFlow>
+      <sequenceFlow id="sid-EE1C80DA-40EF-4E6B-BA39-199E84C8774E" sourceRef="sid-26520EED-4A8C-403A-9EE4-7CD9C28A2610" targetRef="sid-960B0271-8046-4823-8005-8C59D7D32619"></sequenceFlow>
+      <sequenceFlow id="sid-E4E2E2AF-D051-4A24-B48F-39622D936388" sourceRef="sid-960B0271-8046-4823-8005-8C59D7D32619" targetRef="sid-85EBAFA5-824F-47F1-872B-0FF55503A3CE"></sequenceFlow>
+      <sequenceFlow id="sid-CD331D11-781A-4047-8C2C-7A309DB78C41" sourceRef="sid-85EBAFA5-824F-47F1-872B-0FF55503A3CE" targetRef="sid-693B5289-85B1-41D3-B374-569238537A2D"></sequenceFlow>
+      <sequenceFlow id="sid-62CB6F56-CCBF-4B7F-B3DB-FB87536C1C71" name="wip" sourceRef="sid-693B5289-85B1-41D3-B374-569238537A2D" targetRef="sid-69DD5ED8-1872-4011-B2DA-AF30C0A0C03C">
+        <conditionExpression xsi:type="tFormalExpression"><![CDATA[${resourceStatus == 'wip'}]]></conditionExpression>
+      </sequenceFlow>
+    </subProcess>
+    <startEvent id="sid-62A64BD8-4198-493B-9B2D-20405C4C6657" name="&lt;cloud resource&gt; create start"></startEvent>
+    <serviceTask id="sid-B327E490-51A3-40F8-8354-B4AADE61DF31" name="&lt;cloud resource&gt; ready" flowable:class="it.unict.bpmn4tosca.delegate.resources.ResourceMessageHandler">
+      <extensionElements>
+        <flowable:field name="message">
+          <flowable:expression><![CDATA[${node.name}.create]]></flowable:expression>
+        </flowable:field>
+      </extensionElements>
+    </serviceTask>
+    <sequenceFlow id="sid-534E67E9-9820-49CE-AA9F-D4DD35774E4E" sourceRef="sid-B327E490-51A3-40F8-8354-B4AADE61DF31" targetRef="sid-4852947E-1ED5-4D4D-AA32-DBEA2C331317"></sequenceFlow>
+    <endEvent id="sid-4852947E-1ED5-4D4D-AA32-DBEA2C331317">
+      <extensionElements>
+        <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+          <flowable:field name="language">
+            <flowable:string><![CDATA[groovy]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="script">
+            <flowable:string><![CDATA[println "Normal end";]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
+      </extensionElements>
+    </endEvent>
+    <endEvent id="sid-85FE7AA0-2430-47FE-A095-D6D9B97C0635" name="&lt;cloud resource&gt; create timeout">
+      <errorEventDefinition errorRef="cloudResourceCreateTimeout"></errorEventDefinition>
+    </endEvent>
+    <sequenceFlow id="sid-B92E730E-7EFC-419D-A3E6-C2E161EC17B8" sourceRef="sid-5296E9C6-47EE-4199-BD8F-8A36574F4E6A" targetRef="sid-B11185EA-30CA-4F6E-B885-95E0262AD1E4">
+      <extensionElements>
+        <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+          <flowable:field name="language">
+            <flowable:string><![CDATA[groovy]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="script">
+            <flowable:string><![CDATA[println "Node: " + execution.getVariable('node').name + " --> Cloud Resource Create Error thrown";]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="sid-0405412F-CBAD-4CD5-B56F-5843AE7D75FB" sourceRef="sid-0EFF55AE-2505-4F2B-9C30-14EE051F755D" targetRef="sid-85FE7AA0-2430-47FE-A095-D6D9B97C0635">
+      <extensionElements>
+        <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+          <flowable:field name="language">
+            <flowable:string><![CDATA[groovy]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="script">
+            <flowable:string><![CDATA[println "Timeout error triggered: " + execution.getVariable('createTimeout');]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
+    <sequenceFlow id="sid-9CA2FC70-3725-4B47-958B-D82BD168BACE" sourceRef="sid-8670A9AF-261C-47F0-A629-EC0EA60BCE4F" targetRef="sid-1CE4223D-D424-4121-926A-355E3C120DEE">
+      <extensionElements>
+        <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+          <flowable:field name="language">
+            <flowable:string><![CDATA[groovy]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="script">
+            <flowable:string><![CDATA[println "Node: " + execution.getVariable('node').name + " --> Create Error caught";]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
+      </extensionElements>
+    </sequenceFlow>
+    <serviceTask id="sid-BB8AD17E-DEE6-463D-BEDB-9568D9A28FA9" name="create &lt;cloud resource&gt;" flowable:type="http">
+      <extensionElements>
+        <flowable:field name="requestMethod">
+          <flowable:string><![CDATA[POST]]></flowable:string>
+        </flowable:field>
+        <flowable:field name="requestUrl">
+          <flowable:expression><![CDATA[${createResourceURI}]]></flowable:expression>
+        </flowable:field>
+        <flowable:field name="requestHeaders">
+          <flowable:string><![CDATA[Content-Type: application/json]]></flowable:string>
+        </flowable:field>
+        <flowable:field name="requestBody">
+          <flowable:expression><![CDATA[${body}]]></flowable:expression>
+        </flowable:field>
+        <flowable:field name="handleStatusCodes">
+          <flowable:string><![CDATA[4XX,5XX]]></flowable:string>
+        </flowable:field>
+        <flowable:field name="saveResponseParameters">
+          <flowable:string><![CDATA[true]]></flowable:string>
+        </flowable:field>
+        <flowable:field name="resultVariablePrefix">
+          <flowable:string><![CDATA[createResource]]></flowable:string>
+        </flowable:field>
+        <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+          <flowable:field name="language">
+            <flowable:string><![CDATA[groovy]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="script">
+            <flowable:string><![CDATA[import com.fasterxml.jackson.databind.ObjectMapper;
+import it.unict.bpmn4tosca.model.Node;
+
+Node node = execution.getVariable('node');
+Map<String, Object> properties = node.getProperties();
+
+Map<String, Map<String, Object>> globalMap = execution.getVariable('globalMap');
+if(globalMap.size() != 0) {
+   for (Map.Entry<String, Map<String, Object>> pair : globalMap.entrySet()) {
+      Map<String, Object> map = pair.getValue();
+      properties.putAll(map);
+   }
+}
+
+node.setProperties(properties);
+execution.setVariable('node', node);
+
+ObjectMapper mapper = new ObjectMapper();
+execution.setVariable('body', mapper.writeValueAsString(execution.getVariable('node')));
+
+execution.setVariable('createResourceURI', execution.getVariable('serviceBrokerURI') + "/resources");]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
+      </extensionElements>
+    </serviceTask>
+    <endEvent id="sid-B11185EA-30CA-4F6E-B885-95E0262AD1E4" name="&lt;cloud resource&gt; create error">
+      <errorEventDefinition errorRef="cloudResourceCreateError"></errorEventDefinition>
+    </endEvent>
+    <callActivity id="sid-D697E55E-D59E-452C-A546-1B9517D05AFA" name="await create notifications" calledElement="awaitnotifications" flowable:calledElementType="key" flowable:inheritBusinessKey="true">
+      <extensionElements>
+        <flowable:in source="globalMap" target="globalMap"></flowable:in>
+        <flowable:in sourceExpression="${node.requirements['create']}" target="requirements"></flowable:in>
+        <flowable:in source="node" target="node"></flowable:in>
+        <flowable:out source="globalMap" target="globalMap"></flowable:out>
+      </extensionElements>
+    </callActivity>
+    <sequenceFlow id="sid-DB1481D0-6C1E-4692-B697-B8D4B8916CFB" sourceRef="sid-62A64BD8-4198-493B-9B2D-20405C4C6657" targetRef="sid-D697E55E-D59E-452C-A546-1B9517D05AFA"></sequenceFlow>
+    <sequenceFlow id="sid-393FAD81-0742-4A10-904F-A729FAE6A12D" sourceRef="sid-CF388E07-F511-4098-9942-2BA3736051B2" targetRef="sid-BB8AD17E-DEE6-463D-BEDB-9568D9A28FA9"></sequenceFlow>
+    <sequenceFlow id="sid-5682A6AB-ADC0-4680-BAA9-456E3C15E06B" sourceRef="sid-1CE4223D-D424-4121-926A-355E3C120DEE" targetRef="sid-CF388E07-F511-4098-9942-2BA3736051B2"></sequenceFlow>
+    <sequenceFlow id="sid-1BBEE359-6081-4700-83FA-DC400B86C1FA" sourceRef="sid-79B5A343-7B2F-49ED-B469-F90CC11B5D96" targetRef="sid-B327E490-51A3-40F8-8354-B4AADE61DF31"></sequenceFlow>
+    <sequenceFlow id="sid-5DC6797A-2994-4776-B729-E023BF36F008" sourceRef="sid-BB8AD17E-DEE6-463D-BEDB-9568D9A28FA9" targetRef="sid-79B5A343-7B2F-49ED-B469-F90CC11B5D96"></sequenceFlow>
+    <sequenceFlow id="sid-B8032E9C-8C7B-4700-BE87-1DBE7F33F239" name="NO" sourceRef="sid-1CE4223D-D424-4121-926A-355E3C120DEE" targetRef="sid-B11185EA-30CA-4F6E-B885-95E0262AD1E4">
+      <extensionElements>
+        <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+          <flowable:field name="language">
+            <flowable:string><![CDATA[groovy]]></flowable:string>
+          </flowable:field>
+          <flowable:field name="script">
+            <flowable:string><![CDATA[println "retryCounter = 0 --> Cloud Resource Create Error";]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
+      </extensionElements>
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${retryCounter == 0}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="sid-2C9EB88F-2498-402F-9E63-26928D46201E" sourceRef="sid-D697E55E-D59E-452C-A546-1B9517D05AFA" targetRef="sid-BB8AD17E-DEE6-463D-BEDB-9568D9A28FA9"></sequenceFlow>
+    <boundaryEvent id="sid-5296E9C6-47EE-4199-BD8F-8A36574F4E6A" name="any error" attachedToRef="sid-BB8AD17E-DEE6-463D-BEDB-9568D9A28FA9">
+      <errorEventDefinition></errorEventDefinition>
+    </boundaryEvent>
+    <boundaryEvent id="sid-8670A9AF-261C-47F0-A629-EC0EA60BCE4F" name="create error" attachedToRef="sid-79B5A343-7B2F-49ED-B469-F90CC11B5D96">
+      <errorEventDefinition errorRef="createError"></errorEventDefinition>
+    </boundaryEvent>
+    <boundaryEvent id="sid-0EFF55AE-2505-4F2B-9C30-14EE051F755D" name="create timeout" attachedToRef="sid-79B5A343-7B2F-49ED-B469-F90CC11B5D96" cancelActivity="true">
+      <timerEventDefinition>
+        <timeDuration>${createTimeout}</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_createservicex">
+    <bpmndi:BPMNPlane bpmnElement="createservicex" id="BPMNPlane_createservicex">
+      <bpmndi:BPMNShape bpmnElement="sid-CF388E07-F511-4098-9942-2BA3736051B2" id="BPMNShape_sid-CF388E07-F511-4098-9942-2BA3736051B2">
+        <omgdc:Bounds height="80.0" width="100.0" x="366.37718102145345" y="35.701509398199505"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-1CE4223D-D424-4121-926A-355E3C120DEE" id="BPMNShape_sid-1CE4223D-D424-4121-926A-355E3C120DEE">
+        <omgdc:Bounds height="40.0" width="40.0" x="574.0" y="55.701509398199505"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-79B5A343-7B2F-49ED-B469-F90CC11B5D96" id="BPMNShape_sid-79B5A343-7B2F-49ED-B469-F90CC11B5D96">
+        <omgdc:Bounds height="250.78217036678507" width="480.4700260065624" x="652.702713217328" y="126.92218763289361"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-693B5289-85B1-41D3-B374-569238537A2D" id="BPMNShape_sid-693B5289-85B1-41D3-B374-569238537A2D">
+        <omgdc:Bounds height="40.0" width="40.0" x="952.2963234835627" y="230.09028845545413"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-26520EED-4A8C-403A-9EE4-7CD9C28A2610" id="BPMNShape_sid-26520EED-4A8C-403A-9EE4-7CD9C28A2610">
+        <omgdc:Bounds height="30.0" width="30.0" x="675.2827130831815" y="235.30041448365478"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-639C26E2-0D59-49C5-BCCB-E03A8B656D70" id="BPMNShape_sid-639C26E2-0D59-49C5-BCCB-E03A8B656D70">
+        <omgdc:Bounds height="28.0" width="28.0" x="976.5" y="315.09028845545436"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-42B5FF82-F783-4E59-9750-FD8F439A69AC" id="BPMNShape_sid-42B5FF82-F783-4E59-9750-FD8F439A69AC">
+        <omgdc:Bounds height="28.0" width="28.0" x="1090.0425949390776" y="236.09028845545413"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-960B0271-8046-4823-8005-8C59D7D32619" id="BPMNShape_sid-960B0271-8046-4823-8005-8C59D7D32619">
+        <omgdc:Bounds height="40.0" width="40.0" x="745.0425949390776" y="230.09028845545413"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-85EBAFA5-824F-47F1-872B-0FF55503A3CE" id="BPMNShape_sid-85EBAFA5-824F-47F1-872B-0FF55503A3CE">
+        <omgdc:Bounds height="79.3612168742693" width="116.20357211530609" x="810.0" y="210.40968001831948"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-69DD5ED8-1872-4011-B2DA-AF30C0A0C03C" id="BPMNShape_sid-69DD5ED8-1872-4011-B2DA-AF30C0A0C03C">
+        <omgdc:Bounds height="31.0" width="31.0" x="749.5425949390776" y="165.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-0C01A850-9116-4F72-950C-97A9812DCAED" id="BPMNShape_sid-0C01A850-9116-4F72-950C-97A9812DCAED">
+        <omgdc:Bounds height="30.0" width="30.0" x="895.4622334095837" y="275.28524175009755"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-62A64BD8-4198-493B-9B2D-20405C4C6657" id="BPMNShape_sid-62A64BD8-4198-493B-9B2D-20405C4C6657">
+        <omgdc:Bounds height="30.0" width="30.0" x="75.0" y="241.96600735740293"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-B327E490-51A3-40F8-8354-B4AADE61DF31" id="BPMNShape_sid-B327E490-51A3-40F8-8354-B4AADE61DF31">
+        <omgdc:Bounds height="92.0" width="118.0" x="1215.0" y="204.30041448365478"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-4852947E-1ED5-4D4D-AA32-DBEA2C331317" id="BPMNShape_sid-4852947E-1ED5-4D4D-AA32-DBEA2C331317">
+        <omgdc:Bounds height="28.0" width="28.0" x="1380.0" y="236.09028845545413"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-85FE7AA0-2430-47FE-A095-D6D9B97C0635" id="BPMNShape_sid-85FE7AA0-2430-47FE-A095-D6D9B97C0635">
+        <omgdc:Bounds height="28.0" width="28.0" x="1090.0425949390776" y="61.701509398199505"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-BB8AD17E-DEE6-463D-BEDB-9568D9A28FA9" id="BPMNShape_sid-BB8AD17E-DEE6-463D-BEDB-9568D9A28FA9">
+        <omgdc:Bounds height="80.0" width="129.2035721153061" x="351.7753949638004" y="216.3132728162862"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-B11185EA-30CA-4F6E-B885-95E0262AD1E4" id="BPMNShape_sid-B11185EA-30CA-4F6E-B885-95E0262AD1E4">
+        <omgdc:Bounds height="28.0" width="28.0" x="580.0" y="135.7015093981995"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-D697E55E-D59E-452C-A546-1B9517D05AFA" id="BPMNShape_sid-D697E55E-D59E-452C-A546-1B9517D05AFA">
+        <omgdc:Bounds height="80.0" width="100.0" x="180.0" y="216.3132728162862"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-5296E9C6-47EE-4199-BD8F-8A36574F4E6A" id="BPMNShape_sid-5296E9C6-47EE-4199-BD8F-8A36574F4E6A">
+        <omgdc:Bounds height="30.0" width="30.0" x="439.7974335835089" y="201.06981632897245"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-8670A9AF-261C-47F0-A629-EC0EA60BCE4F" id="BPMNShape_sid-8670A9AF-261C-47F0-A629-EC0EA60BCE4F">
+        <omgdc:Bounds height="30.000000000000014" width="30.0" x="796.1868924615281" y="111.67675307339805"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-0EFF55AE-2505-4F2B-9C30-14EE051F755D" id="BPMNShape_sid-0EFF55AE-2505-4F2B-9C30-14EE051F755D">
+        <omgdc:Bounds height="30.999999999999986" width="31.0" x="968.212629151179" y="111.36943604225907"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="sid-5DC6797A-2994-4776-B729-E023BF36F008" id="BPMNEdge_sid-5DC6797A-2994-4776-B729-E023BF36F008">
+        <omgdi:waypoint x="480.92896707910506" y="255.77103920749548"></omgdi:waypoint>
+        <omgdi:waypoint x="652.7027132173271" y="254.32926021115458"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-1BBEE359-6081-4700-83FA-DC400B86C1FA" id="BPMNEdge_sid-1BBEE359-6081-4700-83FA-DC400B86C1FA">
+        <omgdi:waypoint x="1133.1227392238848" y="251.04429637598548"></omgdi:waypoint>
+        <omgdi:waypoint x="1214.9999999999936" y="250.61180190474943"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-0405412F-CBAD-4CD5-B56F-5843AE7D75FB" id="BPMNEdge_sid-0405412F-CBAD-4CD5-B56F-5843AE7D75FB">
+        <omgdi:waypoint x="983.712629151179" y="111.36943604225907"></omgdi:waypoint>
+        <omgdi:waypoint x="983.712629151179" y="75.7015093981995"></omgdi:waypoint>
+        <omgdi:waypoint x="1090.0425949390776" y="75.7015093981995"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-534E67E9-9820-49CE-AA9F-D4DD35774E4E" id="BPMNEdge_sid-534E67E9-9820-49CE-AA9F-D4DD35774E4E">
+        <omgdi:waypoint x="1332.95" y="250.1971025197894"></omgdi:waypoint>
+        <omgdi:waypoint x="1380.0000184404587" y="250.11471559748787"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-CD331D11-781A-4047-8C2C-7A309DB78C41" id="BPMNEdge_sid-CD331D11-781A-4047-8C2C-7A309DB78C41">
+        <omgdi:waypoint x="926.1535721152511" y="250.09028845545413"></omgdi:waypoint>
+        <omgdi:waypoint x="952.2963234835627" y="250.09028845545413"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-9CA2FC70-3725-4B47-958B-D82BD168BACE" id="BPMNEdge_sid-9CA2FC70-3725-4B47-958B-D82BD168BACE">
+        <omgdi:waypoint x="811.1868924615281" y="111.67675307339805"></omgdi:waypoint>
+        <omgdi:waypoint x="811.1868924615281" y="75.7015093981995"></omgdi:waypoint>
+        <omgdi:waypoint x="613.90457190201" y="75.7015093981995"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-B92E730E-7EFC-419D-A3E6-C2E161EC17B8" id="BPMNEdge_sid-B92E730E-7EFC-419D-A3E6-C2E161EC17B8">
+        <omgdi:waypoint x="454.7974335835089" y="201.06981632897245"></omgdi:waypoint>
+        <omgdi:waypoint x="454.7974335835089" y="149.7015093981995"></omgdi:waypoint>
+        <omgdi:waypoint x="580.0" y="149.7015093981995"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-393FAD81-0742-4A10-904F-A729FAE6A12D" id="BPMNEdge_sid-393FAD81-0742-4A10-904F-A729FAE6A12D">
+        <omgdi:waypoint x="416.37718102145345" y="115.65150939819951"></omgdi:waypoint>
+        <omgdi:waypoint x="416.37718102145345" y="216.3132728162862"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-EE1C80DA-40EF-4E6B-BA39-199E84C8774E" id="BPMNEdge_sid-EE1C80DA-40EF-4E6B-BA39-199E84C8774E">
+        <omgdi:waypoint x="705.2326552155446" y="250.25825446220142"></omgdi:waypoint>
+        <omgdi:waypoint x="745.098650963095" y="250.14620433943116"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-62CB6F56-CCBF-4B7F-B3DB-FB87536C1C71" id="BPMNEdge_sid-62CB6F56-CCBF-4B7F-B3DB-FB87536C1C71">
+        <omgdi:waypoint x="972.2121246635315" y="230.1603796084539"></omgdi:waypoint>
+        <omgdi:waypoint x="972.0" y="180.0"></omgdi:waypoint>
+        <omgdi:waypoint x="781.4924117128537" y="180.9225030645187"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-5682A6AB-ADC0-4680-BAA9-456E3C15E06B" id="BPMNEdge_sid-5682A6AB-ADC0-4680-BAA9-456E3C15E06B">
+        <omgdi:waypoint x="574.0" y="75.7015093981995"></omgdi:waypoint>
+        <omgdi:waypoint x="466.3271810214535" y="75.7015093981995"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-B8032E9C-8C7B-4700-BE87-1DBE7F33F239" id="BPMNEdge_sid-B8032E9C-8C7B-4700-BE87-1DBE7F33F239">
+        <omgdi:waypoint x="594.0" y="95.63804785973797"></omgdi:waypoint>
+        <omgdi:waypoint x="594.0" y="135.7015093981995"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-DB1481D0-6C1E-4692-B697-B8D4B8916CFB" id="BPMNEdge_sid-DB1481D0-6C1E-4692-B697-B8D4B8916CFB">
+        <omgdi:waypoint x="104.94984093144902" y="256.89607225783163"></omgdi:waypoint>
+        <omgdi:waypoint x="179.99999999999693" y="256.5461591757775"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-508559D5-C4CA-4FE2-92D7-82A301C8BEF2" id="BPMNEdge_sid-508559D5-C4CA-4FE2-92D7-82A301C8BEF2">
+        <omgdi:waypoint x="765.0425949390776" y="195.94999610310313"></omgdi:waypoint>
+        <omgdi:waypoint x="765.0425949390776" y="230.09028845545413"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-D040A110-20A8-453F-9545-A9BCCC4B5F05" id="BPMNEdge_sid-D040A110-20A8-453F-9545-A9BCCC4B5F05">
+        <omgdi:waypoint x="992.2387578543398" y="250.09028845545413"></omgdi:waypoint>
+        <omgdi:waypoint x="1090.0425949390776" y="250.09028845545413"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-E4E2E2AF-D051-4A24-B48F-39622D936388" id="BPMNEdge_sid-E4E2E2AF-D051-4A24-B48F-39622D936388">
+        <omgdi:waypoint x="784.982925417737" y="250.09028845545413"></omgdi:waypoint>
+        <omgdi:waypoint x="810.0" y="250.09028845545413"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-2B82474F-D91B-4839-AE83-4379B0750D4F" id="BPMNEdge_sid-2B82474F-D91B-4839-AE83-4379B0750D4F">
+        <omgdi:waypoint x="910.4622334095837" y="305.2352296363723"></omgdi:waypoint>
+        <omgdi:waypoint x="910.4622334095837" y="329.09028845545436"></omgdi:waypoint>
+        <omgdi:waypoint x="976.5" y="329.09028845545436"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-2C9EB88F-2498-402F-9E63-26928D46201E" id="BPMNEdge_sid-2C9EB88F-2498-402F-9E63-26928D46201E">
+        <omgdi:waypoint x="279.9499999999798" y="256.3132728162862"></omgdi:waypoint>
+        <omgdi:waypoint x="351.7753949638004" y="256.3132728162862"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

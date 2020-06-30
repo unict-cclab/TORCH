@@ -1,0 +1,142 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+node_types:
+  tosca.nodes.WebServer.Apache:
+    derived_from: tosca.nodes.WebServer
+    description: >
+      The TOSCA Apache Node Type represents an apache component
+      that can be managed and run by a TOSCA Compute Node Type.
+    capabilities:
+      host:
+        type: tosca.capabilities.Container
+    requirements:
+      - host:
+          capability: tosca.capabilities.Container
+          node: tosca.nodes.Compute
+          relationship: tosca.relationships.HostedOn
+    properties:
+      port:
+        type: integer
+        description: Port for the Apache server
+        default: 80
+        constraints:
+          - greater_or_equal: 1
+      document_root:
+        type: string
+        default: /var/www
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          inputs:
+              ip: string
+              port: integer
+              doc_root: string
+          implementation: string
+        start: string
+
+  tosca.nodes.Database.WordpressDB:
+    derived_from: tosca.nodes.Database
+    description: Database for Wordpress Web App
+    requirements:
+      - connect:
+          capability: tosca.capabilities.Root
+          node: tosca.nodes.Compute
+          relationship: tosca.relationships.Root
+  
+  tosca.nodes.SoftwareComponent.PHP:
+    derived_from: tosca.nodes.SoftwareComponent
+    description: PHP install through apt-get.
+    capabilities:
+      attachWebsite:
+        type: tosca.capabilities.Root
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          inputs:
+              ip: string
+          implementation: string
+          
+  tosca.nodes.WebApplication.WordPress:
+    derived_from: tosca.nodes.WebApplication
+    description: The TOSCA Wordpress Node Type represents a Wordpress CMS.
+    properties:
+      zip_url:
+        type: string
+        default: https://wordpress.org/latest.zip
+      context_root:
+        type: string
+        default: /
+    attributes:
+      max_user_number:
+        type: integer
+        default: 10
+        description: Max user number
+      wordpress_url: { concat: ["http://", get_attribute: [HOST, public_address], ":", get_property: [HOST, port], get_property: [SELF, context_root] ] }
+    requirements:
+      - host:
+          capability: tosca.capabilities.Container
+          node: tosca.nodes.WebServer
+          relationship: tosca.relationships.WordpressHostedOnApache
+      - database:
+          capability: tosca.capabilities.Endpoint.Database
+          node: tosca.nodes.Database
+          relationship: tosca.relationships.WordpressConnectToMysql
+          lower_bound: 1
+          upper_bound: 1
+      - php:
+          capability: tosca.capabilities.Root
+          node: tosca.nodes.SoftwareComponent
+          relationship: tosca.relationships.WordpressConnectToPHP
+          lower_bound: 1
+          upper_bound: 1
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          inputs:
+            webfile_url: string
+          implementation: string
+            
+relationship_types:
+  tosca.relationships.WordpressHostedOnApache:
+    derived_from: tosca.relationships.HostedOn
+    description: Relationship used to describe that the website is deployed on the target Apache server.
+    valid_sources: [ tosca.nodes.WebApplication ]
+    valid_targets: [ tosca.capabilities.Container ]
+    interfaces:
+      Configure:
+        type: tosca.interfaces.relationship.Configure
+        pre_configure_source:
+          inputs:
+            context_root: string
+            doc_root: string
+          implementation: string
+          
+  tosca.relationships.WordpressConnectToMysql:
+    derived_from: tosca.relationships.ConnectsTo
+    description: Relationship used to connect the Wordpress with a Mysql database
+    valid_sources: [ tosca.nodes.WebApplication ]
+    valid_targets: [ tosca.capabilities.Endpoint.Database ]
+    interfaces:
+      Configure:
+          type: tosca.interfaces.relationship.Configure
+          pre_configure_source:
+            inputs:
+              db_ip: string
+              db_port: integer
+              db_name: string
+              db_user: string
+              db_password: string
+            implementation: string
+            
+  tosca.relationships.WordpressConnectToPHP:
+    derived_from: tosca.relationships.ConnectsTo
+    description: Relationship used to install the Mysql module for PHP
+    valid_sources: [ tosca.nodes.WebApplication ]
+    valid_targets: [ tosca.capabilities.Root ]
+    interfaces:
+      Configure:
+          type: tosca.interfaces.relationship.Configure
+          pre_configure_source: string

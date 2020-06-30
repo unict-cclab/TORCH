@@ -1,0 +1,9 @@
+{
+  "host": "localhost",
+  "http.port": 9015,
+  "socks.proxy": true,
+  "socks.proxy.set": "true",
+  "socks.proxy.host": "127.0.0.1",
+  "socks.proxy.port": "1234",
+  "network.name": "swarmnet"
+}

@@ -1,0 +1,296 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+description: >
+  TOSCA simple profile with wordpress, web server and mysql on separate servers.
+
+imports:
+  - custom_types/tosca_separate_instances_wordpress_alien_non_normative.yaml
+
+topology_template:
+  inputs:
+    as_host_cpus:
+      type: integer
+      description: Number of CPUs for the application server.
+      constraints:
+        - valid_values: [ 1, 2, 4, 8 ]
+      default: 1
+    as_host_disk_size:
+      type: scalar-unit.size
+      description: Disk size for the application server.
+      default: 10 GB
+    as_host_mem_size:
+      type: scalar-unit.size
+      description: Memory size for the application server.
+      default: 4096 MB
+    as_host_cpu_frequency:
+      type: scalar-unit.frequency
+      description: CPU frequency for the application server
+      default: 1 GHz
+    as_os_architecture:
+      type: string
+      description: OS architecture for the application server.
+      constraints:
+        - valid_values: [x86_32, x86_64]
+      default: x86_64
+    as_os_type:
+      type: string
+      description: OS type for the application server.
+      default: Linux
+    as_os_distribution:
+      type: string
+      description: OS distribution for the application server.
+      default: Ubuntu
+    as_os_version:
+      type: version
+      description: OS version for the application server.
+      default: 14.04
+    ms_host_cpus:
+      type: integer
+      description: Number of CPUs for the mysql server.
+      constraints:
+        - valid_values: [ 1, 2, 4, 8 ]
+      default: 1
+    ms_host_disk_size:
+      type: scalar-unit.size
+      description: Disk size for the mysql server.
+      default: 10 GB
+    ms_host_mem_size:
+      type: scalar-unit.size
+      description: Memory size for the mysql server.
+      default: 4096 MB
+    ms_host_cpu_frequency:
+      type: scalar-unit.frequency
+      description: CPU frequency for the mysql server
+      default: 1 GHz
+    ms_os_architecture:
+      type: string
+      description: OS architecture for the mysql server.
+      constraints:
+        - valid_values: [x86_32, x86_64]
+      default: x86_64
+    ms_os_type:
+      type: string
+      description: OS type for the mysql server.
+      default: Linux
+    ms_os_distribution:
+      type: string
+      description: OS distribution for the mysql server.
+      default: Ubuntu
+    ms_os_version:
+      type: version
+      description: OS version for the mysql server.
+      default: 14.04
+    apache_port:
+      type: integer
+      description: Port for the Apache server
+      default: 80
+    apache_doc_root:
+      type: string
+      default: /var/www
+    db_root_pwd:
+      type: string
+      description: Root password for MySQL.
+      default: root
+    db_port:
+      type: integer
+      description: Port for the MySQL database.
+      default: 3306
+    db_name:
+      type: string
+      description: The name of the database.
+      default: wordpress
+    db_user:
+      type: string
+      description: The user name of the DB user.
+      default: wp_user
+    db_pwd:
+      type: string
+      description: The WordPress database admin account password.
+      default: wp_pass
+    context_root:
+      type: string
+      default: /
+    #wp_admin_username:
+      #type: string
+      #description: The user name of the WordPress admin.
+    #wp_admin_password:
+      #type: string
+      #description: The password of the WordPress admin.
+      
+  node_templates:
+    wordpress:
+      type: tosca.nodes.WebApplication.WordPress
+      properties:
+        zip_url: https://wordpress.org/latest.zip
+        context_root: { get_input: context_root }
+      requirements:
+        - host:
+            node: apache
+            capability: tosca.capabilities.Container
+            relationship: WordpressHostedOnApache
+        - php:
+            node: php
+            capability: tosca.capabilities.Root
+            relationship: WordpressConnectToPHP
+        - database:
+            node: mysql_database
+            capability: tosca.capabilities.Endpoint.Database
+            relationship: WordpressConnectToMysql
+      interfaces:
+        Standard:
+          create:
+            inputs:
+              ip: { get_attribute: [app_server, private_address] }
+              webfile_url: { get_property: [SELF, zip_url] }
+            implementation: scripts/install_wordpress.sh
+  
+    mysql_database:
+      type: tosca.nodes.Database.WordpressDB
+      properties:
+        name: { get_input: db_name }
+        user: { get_input: db_user }
+        password: { get_input: db_pwd }
+      capabilities:
+        database_endpoint:
+          properties:
+            port: { get_input: db_port }
+      requirements:
+        - host: mysql_dbms
+        - connect: app_server
+      interfaces:
+        Standard:
+          configure:
+            implementation: mysql/mysql_database_configure.sh
+            inputs:
+              mysql_server_ip: { get_attribute: [mysql_server, private_address] }
+              db_port: { get_property: [ SELF, database_endpoint, port ] }  
+              #db_port: { get_property: [ mysql_dbms, port ] } 
+              db_name: { get_property: [ SELF, name ] }
+              db_user: { get_property: [ SELF, user ] }
+              db_password: { get_property: [ SELF, password ] }
+              db_root_password: { get_property: [ mysql_dbms, root_password ] }
+  
+    mysql_dbms:
+      type: tosca.nodes.DBMS
+      properties:
+        root_password: { get_input: db_root_pwd }
+        port: { get_input: db_port }
+      requirements:
+        - host: mysql_server
+      interfaces:
+        Standard:
+          create:
+            implementation: mysql/mysql_dbms_install.sh
+            inputs:
+              mysql_server_ip: { get_attribute: [mysql_server, private_address] }
+              db_root_password: { get_property: [ SELF, root_password ] }
+          configure:
+            implementation: mysql/mysql_dbms_configure.sh
+            inputs:
+              mysql_server_ip: { get_attribute: [mysql_server, private_address] }
+              db_port: { get_property: [ SELF, port ] }
+          start:
+            implementation: mysql/mysql_dbms_start.sh
+            inputs:
+              mysql_server_ip: { get_attribute: [mysql_server, private_address] }
+  
+    php:
+      type: tosca.nodes.SoftwareComponent.PHP
+      requirements:
+        - host:
+            node: app_server
+            capability: tosca.capabilities.Container
+            relationship: tosca.relationships.HostedOn
+      interfaces:
+        Standard:
+          create:
+            inputs:
+              ip: { get_attribute: [app_server, private_address] }
+            implementation: scripts/install_php.sh
+            
+    apache:
+      type: tosca.nodes.WebServer.Apache
+      properties:
+        port: { get_input: apache_port }
+        document_root: { get_input: apache_doc_root }
+      requirements:
+        - host: app_server
+      interfaces:
+        Standard:
+          create:
+            inputs:
+              ip: { get_attribute: [app_server, private_address] }
+              port: { get_property: [SELF, port] }
+              doc_root: { get_property: [SELF, document_root] }
+            implementation: scripts/install_apache.sh
+          start:
+            inputs:
+              ip: { get_attribute: [app_server, private_address] }
+            implementation: scripts/start_apache.sh
+
+    app_server:
+      type: tosca.nodes.Compute
+      capabilities:
+        host:
+          properties:
+            disk_size: { get_input: as_host_disk_size }
+            num_cpus: { get_input: as_host_cpus }
+            mem_size: { get_input: as_host_mem_size }
+            cpu_frequency: { get_input: as_host_cpu_frequency }
+        os:
+          properties:
+            architecture: { get_input: as_os_architecture }
+            type: { get_input: as_os_type }
+            distribution: { get_input: as_os_distribution }
+            version: { get_input: as_os_version }
+      
+    mysql_server:
+      type: tosca.nodes.Compute
+      capabilities:
+        host:
+          properties:
+            disk_size: { get_input: ms_host_disk_size }
+            num_cpus: { get_input: ms_host_cpus }
+            mem_size: { get_input: ms_host_mem_size }
+            cpu_frequency: { get_input: ms_host_cpu_frequency }
+        os:
+          properties:
+            architecture: { get_input: ms_os_architecture }
+            type: { get_input: ms_os_type }
+            distribution: { get_input: ms_os_distribution }
+            version: { get_input: ms_os_version }
+
+  relationship_templates:
+    WordpressHostedOnApache:
+      type: tosca.relationships.WordpressHostedOnApache
+      interfaces:
+        Configure:
+          pre_configure_source:
+            inputs:
+              context_root: { get_property: [SOURCE, context_root] }
+              doc_root: { get_property: [TARGET, document_root] }
+            implementation: scripts/config_wordpress.sh
+
+    WordpressConnectToPHP:
+      type: tosca.relationships.WordpressConnectToPHP
+      interfaces:
+        Configure:
+          pre_configure_source: scripts/install_php_module.sh
+
+    WordpressConnectToMysql:
+      type: tosca.relationships.WordpressConnectToMysql
+      interfaces:
+        Configure:
+          pre_configure_source:
+            inputs:
+              db_ip: { get_attribute: [TARGET, ip_address] }
+              db_port: { get_property: [TARGET, port] }      
+              db_name: { get_property: [TARGET, name] }
+              db_user: { get_property: [TARGET, user] }
+              db_password: { get_property: [TARGET, password] }
+            implementation: scripts/config_wordpress_for_mysql.sh
+    
+  outputs:
+    website_url:
+      description: The URL to access the wordpress.
+      value: { get_attribute: [ wordpress, wordpress_url ] } 

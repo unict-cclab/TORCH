@@ -1,0 +1,69 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  
+  <parent>
+    <groupId>it.unict</groupId>
+    <artifactId>vertx-esb</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  
+  <artifactId>instantiate-k8s-cluster-openstack</artifactId>
+  
+  <properties>
+    <main.verticle>it.unict.vertx.esb.instantiatek8scluster.InstantiateK8sClusterOpenstackVerticle</main.verticle>
+  </properties>
+  
+  <dependencies>
+    <dependency>
+      <groupId>it.unict</groupId>
+      <artifactId>vertx-esb-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+	<dependency>
+	  <groupId>org.pacesys</groupId>
+	  <artifactId>openstack4j</artifactId>
+	  <version>3.1.0</version>
+	  <!-- Per importare tutte le dipendenze a runtime -->
+	  <classifier>withdeps</classifier>
+	</dependency>
+    <dependency>
+      <groupId>io.kubernetes</groupId>
+      <artifactId>client-java</artifactId>
+      <version>6.0.1</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
+  
+  <build>
+    <plugins>
+      <plugin>
+        <!-- plugin to create a `fat-jar` -->
+        <artifactId>maven-shade-plugin</artifactId>
+        
+	<executions>
+	    <execution>
+		<phase>package</phase>
+		<goals>
+		    <goal>shade</goal>
+		</goals>
+	       
+		<configuration>
+		  <filters>
+		    <filter>
+		      <artifact>*:*</artifact>
+		      <excludes>
+			<exclude>META-INF/*.SF</exclude>
+			<exclude>META-INF/*.DSA</exclude>
+			<exclude>META-INF/*.RSA</exclude>
+		      </excludes>
+		    </filter>
+		  </filters>
+		</configuration>
+	</execution>
+	</executions>
+        
+      </plugin>
+    </plugins>
+  </build>
+  
+</project>

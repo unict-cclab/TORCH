@@ -1,0 +1,6 @@
+{
+  "host": "localhost",
+  "http.port": 9004,
+  "key.name": "/resources/toscaKeys.pem",
+  "script.name": "/resources/mysql-configure.sh"
+}

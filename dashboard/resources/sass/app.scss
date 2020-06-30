@@ -1,0 +1,22 @@
+// Fonts
+@import url('https://fonts.googleapis.com/css?family=Nunito');
+
+// Variables
+@import 'variables';
+
+// Bootstrap
+@import '~bootstrap/scss/bootstrap';
+
+// Open-Iconic
+@import '~open-iconic/font/css/open-iconic-bootstrap.css';
+
+
+.cloud-background {
+    background-image: url("/img/welcome_wallpaper.jpg");
+    opacity: 0.2;
+    height: 100vh;
+    width: 100vw;
+    position: absolute;
+    top: 0;
+    left: 0;
+}

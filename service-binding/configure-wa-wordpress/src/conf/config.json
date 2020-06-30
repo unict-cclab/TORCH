@@ -1,0 +1,6 @@
+{
+  "host": "localhost",
+  "http.port": 9011,
+  "key.name": "/resources/toscaKeys.pem",
+  "script.name": "/resources/wordpress-configure.sh"
+}

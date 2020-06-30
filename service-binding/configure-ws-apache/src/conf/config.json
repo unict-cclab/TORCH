@@ -1,0 +1,6 @@
+{
+  "host": "localhost",
+  "http.port": 9008,
+  "key.name": "/resources/toscaKeys.pem",
+  "script.name": "/resources/apache-configure.sh"
+}

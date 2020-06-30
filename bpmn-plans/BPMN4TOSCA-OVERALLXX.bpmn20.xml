@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:flowable="http://flowable.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" typeLanguage="http://www.w3.org/2001/XMLSchema" expressionLanguage="http://www.w3.org/1999/XPath" targetNamespace="http://www.signavio.com">
+  <signal id="escalation" name="Escalation" flowable:scope="processInstance"></signal>
+  <process id="bpmn4tosca-overallXX" name="BPMN4TOSCA-OVERALLXX" isExecutable="true">
+    <extensionElements>
+      <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+        <flowable:field name="language">
+          <flowable:string><![CDATA[groovy]]></flowable:string>
+        </flowable:field>
+        <flowable:field name="script">
+          <flowable:string><![CDATA[//execution.setVariable("jsonInput",'[{"name":"k8s_cluster","type":"resource","category":"cluster","requirements":{"create":[],"configure":[],"start":[]},"properties":{"platform":"kubernetes"}},{"name":"mysql_deployment_unit","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"properties":{},"containers":[{"name":"mysql_container","category":"db","image":"mysql:5.7","volumes":[],"configuration_script": "no.configuration.script","ext_requirements":{},"properties":{"port":"3306:3306","mysql_root_password":"root"}}]},{"name":"wordpress_deployment_unit","type":"du","requirements":{"create":["k8s_cluster.create","mysql_deployment_unit.configure"],"configure":[],"start":[]},"properties":{},"containers":[{"name":"wordpress_container","category":"wa","image":"wordpress","volumes":[],"configuration_script": "no.configuration.script","ext_requirements":{"wordpress_db_host": "mysql_container"},"properties":{"port":"80:80","wordpress_db_password": "root"}}]}]');
+
+//execution.setVariable("jsonInput",'[{"name":"k8s_cluster","type":"resource","category":"cluster","requirements":{"create":[],"configure":[],"start":[]},"properties":{"platform":"kubernetes"}},{"name":"front-end-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"front-end","category":"wa","image":"weaveworksdemos/front-end:0.3.12","volumes":[],"ext_requirements":{},"properties":{"port":"80:8079"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"catalogue-du","type":"du","requirements":{"create": ["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"catalogue","category":"wa","image":"weaveworksdemos/catalogue:0.3.5","volumes":[],"ext_requirements":{},"properties":{"port":"80:80"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"catalogue-db-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"catalogue-db","category":"db","image":"weaveworksdemos/catalogue-db:0.3.0","volumes":[],"ext_requirements":{},"properties":{"port":"3306:3306","MYSQL_ROOT_PASSWORD":"fake_password","MYSQL_ALLOW_EMPTY_PASSWORD": true,"MYSQL_DATABASE": "socksdb"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"carts-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"carts","category":"wa","image":"weaveworksdemos/carts:0.4.8","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"80:80","ZIPKIN":"zipkin.jaeger.svc.cluster.local","JAVA_OPTS":"-Xms64m -Xmx128m -XX:PermSize=32m -XX:MaxPermSize=64m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"carts-db-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"carts-db","category":"db","image":"mongo:3.4","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"27017:27017"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"orders-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"orders","category":"wa","image":"weaveworksdemos/orders:0.4.7","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"80:80","ZIPKIN":"zipkin.jaeger.svc.cluster.local","JAVA_OPTS":"-Xms64m -Xmx128m -XX:PermSize=32m -XX:MaxPermSize=64m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"orders-db-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"orders-db","category":"db","image":"mongo:3.4","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"27017:27017"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"shipping-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"shipping","category":"wa","image":"weaveworksdemos/shipping:0.4.8","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"80:80","ZIPKIN":"zipkin.jaeger.svc.cluster.local","JAVA_OPTS":"-Xms64m -Xmx128m -XX:PermSize=32m -XX:MaxPermSize=64m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"queue-master-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"queue-master","category":"wa","image":"weaveworksdemos/queue-master:0.3.1","volumes":[],"ext_requirements":{},"properties":{"port":"80:80"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"rabbitmq-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"rabbitmq","category":"unk","image":"rabbitmq:3.6.8","volumes":[],"ext_requirements":{},"properties":{"port":"5672:5672"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"payment-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"payment","category":"wa","image":"weaveworksdemos/payment:0.4.3","volumes":[],"ext_requirements":{},"properties":{"port":"80:80"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"user-du","type":"du","requirements":{"create":["k8s_cluster.create","user-db-du.configure"],"configure":[],"start":[]},"containers":[{"name":"user","category":"wa","image":"weaveworksdemos/user:0.4.7","volumes":[],"ext_requirements":{"MONGO_HOST":"user-db"},"properties":{"port":"80:80","MONGO_HOST":"user-db:27017"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"user-db-du","type":"du","requirements":{"create":["k8s_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"user-db","category":"db","image":"weaveworksdemos/user-db:0.4.0","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"27017:27017"},"configuration_script":"no.configuration.script"}],"properties":{}}]');
+
+//execution.setVariable("jsonInput",'[{"name":"swarm_cluster","type":"resource","category":"cluster","requirements":{"create":[],"configure":[],"start":[]},"properties":{"platform":"swarm"}},{"name":"mysql_deployment_unit","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"properties":{},"containers":[{"name":"mysql_container","category":"db","image":"mysql:5.7","volumes":[],"configuration_script": "no.configuration.script","ext_requirements":{},"properties":{"PORT":"3306:3306","MYSQL_ROOT_PASSWORD":"root"}}]},{"name":"wordpress_deployment_unit","type":"du","requirements":{"create":["swarm_cluster.create","mysql_deployment_unit.configure"],"configure":[],"start":[]},"properties":{},"containers":[{"name":"wordpress_container","category":"wa","image":"wordpress","volumes":[],"configuration_script": "no.configuration.script","ext_requirements":{"wordpress_db_host": "mysql_container"},"properties":{"PORT":"80:80","WORDPRESS_DB_PASSWORD": "root"}}]}]');
+
+//execution.setVariable("jsonInput",'[{"name":"swarm_cluster","type":"resource","category":"cluster","requirements":{"create":[],"configure":[],"start":[]},"properties":{"platform":"swarm"}},{"name":"front-end-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"front-end","category":"wa","image":"weaveworksdemos/front-end:0.3.12","volumes":[],"ext_requirements":{},"properties":{"port":"80:8079"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"catalogue-du","type":"du","requirements":{"create": ["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"catalogue","category":"wa","image":"weaveworksdemos/catalogue:0.3.5","volumes":[],"ext_requirements":{},"properties":{"port":"80:80"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"catalogue-db-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"catalogue-db","category":"db","image":"weaveworksdemos/catalogue-db:0.3.0","volumes":[],"ext_requirements":{},"properties":{"port":"3306:3306","MYSQL_ROOT_PASSWORD":"fake_password","MYSQL_ALLOW_EMPTY_PASSWORD": true,"MYSQL_DATABASE": "socksdb"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"carts-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"carts","category":"wa","image":"weaveworksdemos/carts:0.4.8","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"80:80","ZIPKIN":"zipkin.jaeger.svc.cluster.local","JAVA_OPTS":"-Xms64m -Xmx128m -XX:PermSize=32m -XX:MaxPermSize=64m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"carts-db-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"carts-db","category":"db","image":"mongo:3.4","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"27017:27017"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"orders-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"orders","category":"wa","image":"weaveworksdemos/orders:0.4.7","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"80:80","ZIPKIN":"zipkin.jaeger.svc.cluster.local","JAVA_OPTS":"-Xms64m -Xmx128m -XX:PermSize=32m -XX:MaxPermSize=64m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"orders-db-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"orders-db","category":"db","image":"mongo:3.4","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"27017:27017"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"shipping-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"shipping","category":"wa","image":"weaveworksdemos/shipping:0.4.8","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"80:80","ZIPKIN":"zipkin.jaeger.svc.cluster.local","JAVA_OPTS":"-Xms64m -Xmx128m -XX:PermSize=32m -XX:MaxPermSize=64m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"queue-master-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"queue-master","category":"wa","image":"weaveworksdemos/queue-master:0.3.1","volumes":[],"ext_requirements":{},"properties":{"port":"80:80"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"rabbitmq-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"rabbitmq","category":"unk","image":"rabbitmq:3.6.8","volumes":[],"ext_requirements":{},"properties":{"port":"5672:5672"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"payment-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"payment","category":"wa","image":"weaveworksdemos/payment:0.4.3","volumes":[],"ext_requirements":{},"properties":{"port":"80:80"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"user-du","type":"du","requirements":{"create":["swarm_cluster.create","user-db-du.configure"],"configure":[],"start":[]},"containers":[{"name":"user","category":"wa","image":"weaveworksdemos/user:0.4.7","volumes":[],"ext_requirements":{"MONGO_HOST":"user-db"},"properties":{"port":"80:80","MONGO_HOST":"user-db-du:27017"},"configuration_script":"no.configuration.script"}],"properties":{}},{"name":"user-db-du","type":"du","requirements":{"create":["swarm_cluster.create"],"configure":[],"start":[]},"containers":[{"name":"user-db","category":"db","image":"weaveworksdemos/user-db:0.4.0","volumes":[{"name":"temp-volume","category":"block_store","properties":{"size":"10 GB","location":"/tmp"}}],"ext_requirements":{},"properties":{"port":"27017:27017"},"configuration_script":"no.configuration.script"}],"properties":{}}]');
+
+//execution.setVariable("jsonInput",'[{"name":"swarm_cluster","type":"resource","category":"cluster","requirements":{"create":[],"configure":[],"start":[]},"properties":{"platform":"swarm"}},{"name": "front-end-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "front-end", "category": "wa", "image": "weaveworksdemos/front-end:0.3.12", "volumes": [], "properties": {"port": "80:8079"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "catalogue-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "catalogue", "category": "unk", "image": "weaveworksdemos/catalogue:0.3.5", "volumes": [], "properties": {"port": "80:80"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "catalogue-db-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "catalogue-db", "category": "db", "image": "weaveworksdemos/catalogue-db:0.3.0", "volumes": [], "properties": {"port": "3306:3306", "MYSQL_ROOT_PASSWORD": "fake_password", "MYSQL_ALLOW_EMPTY_PASSWORD": true, "MYSQL_DATABASE": "socksdb"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "carts-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "carts", "category": "unk", "image": "weaveworksdemos/carts:0.4.8", "volumes": [{"name": "temp-volume", "category": "block_store", "properties": {"size": "10 GB", "location": "/tmp"}}], "properties": {"port": "80:80", "ZIPKIN": "zipkin.jaeger.svc.cluster.local", "JAVA_OPTS": "-Xms64m -Xmx128m -XX:PermSize=32m -XX:MaxPermSize=64m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "carts-db-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "carts-db", "category": "db", "image": "mongo:3.4", "volumes": [{"name": "temp-volume", "category": "block_store", "properties": {"size": "10 GB", "location": "/tmp"}}], "properties": {"port": "27017:27017"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "orders-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "orders", "category": "unk", "image": "weaveworksdemos/orders:0.4.7", "volumes": [{"name": "temp-volume", "category": "block_store", "properties": {"size": "10 GB", "location": "/tmp"}}], "properties": {"port": "80:80", "ZIPKIN": "zipkin.jaeger.svc.cluster.local", "JAVA_OPTS": "-Xms64m -Xmx128m -XX:PermSize=32m -XX:MaxPermSize=64m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "orders-db-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "orders-db", "category": "db", "image": "mongo:3.4", "volumes": [{"name": "temp-volume", "category": "block_store", "properties": {"size": "10 GB", "location": "/tmp"}}], "properties": {"port": "27017:27017"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "shipping-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "shipping", "category": "unk", "image": "weaveworksdemos/shipping:0.4.8", "volumes": [{"name": "temp-volume", "category": "block_store", "properties": {"size": "10 GB", "location": "/tmp"}}], "properties": {"port": "80:80", "ZIPKIN": "zipkin.jaeger.svc.cluster.local", "JAVA_OPTS": "-Xms64m -Xmx128m -XX:PermSize=32m -XX:MaxPermSize=64m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "queue-master-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "queue-master", "category": "unk", "image": "weaveworksdemos/queue-master:0.3.1", "volumes": [], "properties": {"port": "80:80"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "rabbitmq-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "rabbitmq", "category": "unk", "image": "rabbitmq:3.6.8", "volumes": [], "properties": {"port": "5672:5672"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "payment-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "payment", "category": "unk", "image": "weaveworksdemos/payment:0.4.3", "volumes": [], "properties": {"port": "80:80"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "user-du", "type": "du", "requirements": {"create": ["swarm_cluster.create","user-db-du.configure"], "configure": [], "start": []}, "containers": [{"name": "user", "category": "unk", "image": "weaveworksdemos/user:0.4.7", "volumes": [], "properties": {"port": "80:80", "MONGO_HOST": "user-db:27017"}, "configuration_script": "no.configuration.script"}], "properties": {}}, {"name": "user-db-du", "type": "du", "requirements": {"create": ["swarm_cluster.create"], "configure": [], "start": []}, "containers": [{"name": "user-db", "category": "db", "image": "weaveworksdemos/user-db:0.4.0", "volumes": [{"name": "temp-volume", "category": "block_store", "properties": {"size": "10 GB", "location": "/tmp"}}], "properties": {"port": "27017:27017"}, "configuration_script": "no.configuration.script"}], "properties": {}}]');
+
+//execution.setVariable("serviceBrokerURI","http://localhost:9000");
+//execution.setVariable("retryCounter",1);
+//execution.setVariable("checkPeriod","PT30S");
+//execution.setVariable("createTimeout","PT30M");
+
+def businessKey = UUID.randomUUID().toString();execution.setVariable('businessKey', businessKey);
+runtimeService.updateBusinessKey(execution.getId(), businessKey);
+println "BPMN4ToscaOverall Business Key:  " + execution.getProcessInstanceBusinessKey();]]></flowable:string>
+        </flowable:field>
+      </flowable:executionListener>
+    </extensionElements>
+    <startEvent id="sid-2D83E14F-7BD1-4546-BC93-7838AAE30FEF" name="begin"></startEvent>
+    <subProcess id="sid-A7813BE5-A744-4D45-B04F-376B527A943B" name="Instantiate Node">
+      <multiInstanceLoopCharacteristics isSequential="false" flowable:collection="nodes" flowable:elementVariable="node"></multiInstanceLoopCharacteristics>
+      <startEvent id="sid-ACC41E62-76DA-4E97-8B60-9FF419117239"></startEvent>
+      <endEvent id="sid-600494D2-F452-45C0-AEDD-7581BFDCAC0E"></endEvent>
+      <callActivity id="sid-EF8C9D66-6808-4E2A-9ADD-341AAA442773" name="deploy
+&lt;package&gt;" calledElement="deploypackagexx" flowable:calledElementType="key" flowable:processInstanceName="${node.name}" flowable:inheritBusinessKey="true" flowable:completeAsync="true">
+        <extensionElements>
+          <flowable:in source="node" target="node"></flowable:in>
+          <flowable:in source="serviceBrokerURI" target="serviceBrokerURI"></flowable:in>
+        </extensionElements>
+      </callActivity>
+      <callActivity id="sid-EF8C9D66-6808-4E2A-9ADD-341AAA442774" name="create
+&lt;cloud resource&gt;" calledElement="createservicex" flowable:calledElementType="key" flowable:processInstanceName="${node.name}" flowable:inheritBusinessKey="true" flowable:completeAsync="true">
+        <extensionElements>
+          <flowable:in source="node" target="node"></flowable:in>
+          <flowable:in source="retryCounter" target="retryCounter"></flowable:in>
+          <flowable:in source="checkPeriod" target="checkPeriod"></flowable:in>
+          <flowable:in source="createTimeout" target="createTimeout"></flowable:in>
+          <flowable:in source="serviceBrokerURI" target="serviceBrokerURI"></flowable:in>
+        </extensionElements>
+      </callActivity>
+      <exclusiveGateway id="sid-D47AE74D-DF22-45FC-9F8B-2490806AF7C8"></exclusiveGateway>
+      <exclusiveGateway id="sid-DCC2E0CB-85B7-415E-9348-FF3F7DBAD171"></exclusiveGateway>
+      <intermediateThrowEvent id="sid-54DED2D5-EDF7-41C7-835D-45637B60F2F0" name="cloud resource
+error">
+        <signalEventDefinition signalRef="escalation"></signalEventDefinition>
+      </intermediateThrowEvent>
+      <intermediateThrowEvent id="sid-5B79A65C-A5BE-426B-8577-D22F133D2BBA" name="package
+error">
+        <signalEventDefinition signalRef="escalation"></signalEventDefinition>
+      </intermediateThrowEvent>
+      <callActivity id="sid-B42E9911-8C80-4392-8904-3539C994652C" name="create
+&lt;cloud resource&gt;" calledElement="createservicex" flowable:calledElementType="key" flowable:inheritBusinessKey="true" flowable:completeAsync="true">
+        <extensionElements>
+          <flowable:in source="node" target="node"></flowable:in>
+          <flowable:in source="retryCounter" target="retryCounter"></flowable:in>
+          <flowable:in source="checkPeriod" target="checkPeriod"></flowable:in>
+          <flowable:in source="createTimeout" target="createTimeout"></flowable:in>
+          <flowable:in source="serviceBrokerURI" target="serviceBrokerURI"></flowable:in>
+        </extensionElements>
+      </callActivity>
+      <boundaryEvent id="sid-41B3294C-B188-4F51-AFEB-75415A5F765E" name="any error" attachedToRef="sid-B42E9911-8C80-4392-8904-3539C994652C">
+        <errorEventDefinition></errorEventDefinition>
+      </boundaryEvent>
+      <callActivity id="sid-5BB55E0D-D6A3-4FCC-8653-BAE7FB515B1E" name="create &lt;deployment unit&gt;" calledElement="createdeploymentunit" flowable:calledElementType="key" flowable:processInstanceName="${node.name}" flowable:inheritBusinessKey="true" flowable:completeAsync="true">
+        <extensionElements>
+          <flowable:in source="node" target="node"></flowable:in>
+          <flowable:in source="retryCounter" target="retryCounter"></flowable:in>
+          <flowable:in source="checkPeriod" target="checkPeriod"></flowable:in>
+          <flowable:in source="createTimeout" target="createTimeout"></flowable:in>
+          <flowable:in source="serviceBrokerURI" target="serviceBrokerURI"></flowable:in>
+        </extensionElements>
+      </callActivity>
+      <intermediateThrowEvent id="sid-2487CBDB-4632-4B33-A480-EDC500E6C0C3" name="du error">
+        <signalEventDefinition signalRef="escalation"></signalEventDefinition>
+      </intermediateThrowEvent>
+      <boundaryEvent id="sid-9836F998-1615-423C-B758-DFA71F4820E8" name="any error" attachedToRef="sid-EF8C9D66-6808-4E2A-9ADD-341AAA442774">
+        <errorEventDefinition></errorEventDefinition>
+      </boundaryEvent>
+      <boundaryEvent id="sid-E924E390-BE71-4574-8156-C89D07B6B111" name="any error" attachedToRef="sid-5BB55E0D-D6A3-4FCC-8653-BAE7FB515B1E">
+        <errorEventDefinition></errorEventDefinition>
+      </boundaryEvent>
+      <boundaryEvent id="sid-479AB990-1A44-4749-839A-AE80C17A72E3" name="any error" attachedToRef="sid-EF8C9D66-6808-4E2A-9ADD-341AAA442773">
+        <errorEventDefinition></errorEventDefinition>
+      </boundaryEvent>
+      <sequenceFlow id="sid-03C53F81-7F69-45E8-B9F9-4021D23999CC" sourceRef="sid-EF8C9D66-6808-4E2A-9ADD-341AAA442774" targetRef="sid-DCC2E0CB-85B7-415E-9348-FF3F7DBAD171"></sequenceFlow>
+      <sequenceFlow id="sid-9612124B-DBE4-4CB3-BD85-19D9659A7FA0" sourceRef="sid-ACC41E62-76DA-4E97-8B60-9FF419117239" targetRef="sid-D47AE74D-DF22-45FC-9F8B-2490806AF7C8"></sequenceFlow>
+      <sequenceFlow id="sid-354442CD-613F-437F-ACE4-6A1378E9EFC3" sourceRef="sid-EF8C9D66-6808-4E2A-9ADD-341AAA442773" targetRef="sid-DCC2E0CB-85B7-415E-9348-FF3F7DBAD171"></sequenceFlow>
+      <sequenceFlow id="sid-38382C0B-46F8-4BD9-8A5D-4F83BF3667B5" sourceRef="sid-DCC2E0CB-85B7-415E-9348-FF3F7DBAD171" targetRef="sid-600494D2-F452-45C0-AEDD-7581BFDCAC0E"></sequenceFlow>
+      <sequenceFlow id="sid-718595F6-7E40-4D84-A55F-9750A2333B86" sourceRef="sid-5BB55E0D-D6A3-4FCC-8653-BAE7FB515B1E" targetRef="sid-DCC2E0CB-85B7-415E-9348-FF3F7DBAD171"></sequenceFlow>
+      <sequenceFlow id="sid-741B9A73-C91B-4227-8DAA-E63056DB7492" name="package" sourceRef="sid-D47AE74D-DF22-45FC-9F8B-2490806AF7C8" targetRef="sid-EF8C9D66-6808-4E2A-9ADD-341AAA442773">
+        <conditionExpression xsi:type="tFormalExpression"><![CDATA[${node.type == 'package'}]]></conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow id="sid-B71F72DC-74AB-4AAA-AC5A-F5E905F3306D" name="cloud resource" sourceRef="sid-D47AE74D-DF22-45FC-9F8B-2490806AF7C8" targetRef="sid-EF8C9D66-6808-4E2A-9ADD-341AAA442774">
+        <conditionExpression xsi:type="tFormalExpression"><![CDATA[${node.type == 'resource'}]]></conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow id="sid-0B2EF226-36B6-4100-B8AC-2A1E40A85A99" name="du" sourceRef="sid-D47AE74D-DF22-45FC-9F8B-2490806AF7C8" targetRef="sid-5BB55E0D-D6A3-4FCC-8653-BAE7FB515B1E">
+        <conditionExpression xsi:type="tFormalExpression"><![CDATA[${node.type == 'du'}]]></conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow id="sid-8E3782FF-23A4-49B8-88B4-09BAA1CA245D" sourceRef="sid-479AB990-1A44-4749-839A-AE80C17A72E3" targetRef="sid-5B79A65C-A5BE-426B-8577-D22F133D2BBA"></sequenceFlow>
+      <sequenceFlow id="sid-20F6B9AF-2F40-46D9-B0AA-740FEB3B63F3" sourceRef="sid-E924E390-BE71-4574-8156-C89D07B6B111" targetRef="sid-2487CBDB-4632-4B33-A480-EDC500E6C0C3">
+        <extensionElements>
+          <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+            <flowable:field name="language">
+              <flowable:string><![CDATA[groovy]]></flowable:string>
+            </flowable:field>
+            <flowable:field name="script">
+              <flowable:string><![CDATA[println "Deployment Unit escalation triggered";]]></flowable:string>
+            </flowable:field>
+          </flowable:executionListener>
+        </extensionElements>
+      </sequenceFlow>
+      <sequenceFlow id="sid-158D397E-65C2-430C-97B8-44CF8DC3381E" sourceRef="sid-9836F998-1615-423C-B758-DFA71F4820E8" targetRef="sid-54DED2D5-EDF7-41C7-835D-45637B60F2F0">
+        <extensionElements>
+          <flowable:executionListener event="start" class="org.flowable.engine.impl.bpmn.listener.ScriptExecutionListener">
+            <flowable:field name="language">
+              <flowable:string><![CDATA[groovy]]></flowable:string>
+            </flowable:field>
+            <flowable:field name="script">
+              <flowable:string><![CDATA[println "Cloud resource escalation triggered";]]></flowable:string>
+            </flowable:field>
+          </flowable:executionListener>
+        </extensionElements>
+      </sequenceFlow>
+    </subProcess>
+    <endEvent id="sid-B2BA4B9A-11DE-443D-9BBC-7962523F3302" name="complete"></endEvent>
+    <endEvent id="sid-5871BCD1-9FF0-4870-80A3-24C8A04069A1" name="end escalation"></endEvent>
+    <scriptTask id="sid-182603B1-1ACA-40C3-809C-A4A7E115568F" name="perform escalation" scriptFormat="groovy" flowable:autoStoreVariables="false">
+      <script><![CDATA[println "Escalation for Execution ID: " + execution.getId();]]></script>
+    </scriptTask>
+    <scriptTask id="sid-ED4C308F-F9D4-41CA-9076-906C824DBBD8" name="init" scriptFormat="groovy" flowable:autoStoreVariables="false">
+      <script><![CDATA[import com.fasterxml.jackson.databind.ObjectMapper;
+import it.unict.bpmn4tosca.model.Node;
+import it.unict.bpmn4tosca.model.DeploymentNode;
+
+ObjectMapper mapper = new ObjectMapper();
+//List<Node> nodes = mapper.readValue(jsonInput, mapper.getTypeFactory().constructCollectionType(List.class, Node.class));
+
+List<Node> nodes = mapper.readValue(jsonInput, mapper.getTypeFactory().constructCollectionType(List.class, DeploymentNode.class));
+
+execution.setVariable("nodes", nodes);]]></script>
+    </scriptTask>
+    <sequenceFlow id="sid-616D4B7A-3D85-4D81-8F72-3194300F4C02" sourceRef="sid-A7813BE5-A744-4D45-B04F-376B527A943B" targetRef="sid-B2BA4B9A-11DE-443D-9BBC-7962523F3302"></sequenceFlow>
+    <sequenceFlow id="sid-1EA35E91-49FF-47DD-886A-A316EF81C505" sourceRef="sid-182603B1-1ACA-40C3-809C-A4A7E115568F" targetRef="sid-5871BCD1-9FF0-4870-80A3-24C8A04069A1"></sequenceFlow>
+    <sequenceFlow id="sid-8D65B5DD-59D2-4AF7-9A39-CD10B3DAA75C" sourceRef="sid-2D83E14F-7BD1-4546-BC93-7838AAE30FEF" targetRef="sid-ED4C308F-F9D4-41CA-9076-906C824DBBD8"></sequenceFlow>
+    <sequenceFlow id="sid-BBB6B4F9-AD68-459B-BAE7-AF218A61AB63" sourceRef="sid-ED4C308F-F9D4-41CA-9076-906C824DBBD8" targetRef="sid-A7813BE5-A744-4D45-B04F-376B527A943B"></sequenceFlow>
+    <sequenceFlow id="sid-8E1F0139-C103-4CF7-80AC-EE44A74926ED" sourceRef="sid-0447876F-F5A8-42CC-90D7-5C559B7DA234" targetRef="sid-182603B1-1ACA-40C3-809C-A4A7E115568F"></sequenceFlow>
+    <boundaryEvent id="sid-0447876F-F5A8-42CC-90D7-5C559B7DA234" name="error escalation" attachedToRef="sid-A7813BE5-A744-4D45-B04F-376B527A943B" cancelActivity="false">
+      <signalEventDefinition signalRef="escalation"></signalEventDefinition>
+    </boundaryEvent>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_bpmn4tosca-overallXX">
+    <bpmndi:BPMNPlane bpmnElement="bpmn4tosca-overallXX" id="BPMNPlane_bpmn4tosca-overallXX">
+      <bpmndi:BPMNShape bpmnElement="sid-2D83E14F-7BD1-4546-BC93-7838AAE30FEF" id="BPMNShape_sid-2D83E14F-7BD1-4546-BC93-7838AAE30FEF">
+        <omgdc:Bounds height="30.0" width="30.0" x="38.235830192124666" y="232.17802886163304"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-A7813BE5-A744-4D45-B04F-376B527A943B" id="BPMNShape_sid-A7813BE5-A744-4D45-B04F-376B527A943B">
+        <omgdc:Bounds height="407.6363157133758" width="712.3692120482688" x="405.0" y="43.359871004945205"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-ACC41E62-76DA-4E97-8B60-9FF419117239" id="BPMNShape_sid-ACC41E62-76DA-4E97-8B60-9FF419117239">
+        <omgdc:Bounds height="30.0" width="30.0" x="442.76416980787553" y="231.26999335134542"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-600494D2-F452-45C0-AEDD-7581BFDCAC0E" id="BPMNShape_sid-600494D2-F452-45C0-AEDD-7581BFDCAC0E">
+        <omgdc:Bounds height="28.0" width="28.0" x="1050.0" y="232.26999335134542"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-EF8C9D66-6808-4E2A-9ADD-341AAA442773" id="BPMNShape_sid-EF8C9D66-6808-4E2A-9ADD-341AAA442773">
+        <omgdc:Bounds height="80.00000000000006" width="161.3098474958672" x="638.7641698078755" y="322.4076984887172"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-EF8C9D66-6808-4E2A-9ADD-341AAA442774" id="BPMNShape_sid-EF8C9D66-6808-4E2A-9ADD-341AAA442774">
+        <omgdc:Bounds height="80.00000000000006" width="161.3098474958672" x="638.7641698078755" y="90.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-D47AE74D-DF22-45FC-9F8B-2490806AF7C8" id="BPMNShape_sid-D47AE74D-DF22-45FC-9F8B-2490806AF7C8">
+        <omgdc:Bounds height="40.0" width="40.0" x="547.7641698078755" y="226.26999335134542"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-DCC2E0CB-85B7-415E-9348-FF3F7DBAD171" id="BPMNShape_sid-DCC2E0CB-85B7-415E-9348-FF3F7DBAD171">
+        <omgdc:Bounds height="40.0" width="40.0" x="952.7641698078755" y="226.26999335134542"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-54DED2D5-EDF7-41C7-835D-45637B60F2F0" id="BPMNShape_sid-54DED2D5-EDF7-41C7-835D-45637B60F2F0">
+        <omgdc:Bounds height="30.0" width="30.0" x="877.7641698078755" y="136.59487337725383"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-5B79A65C-A5BE-426B-8577-D22F133D2BBA" id="BPMNShape_sid-5B79A65C-A5BE-426B-8577-D22F133D2BBA">
+        <omgdc:Bounds height="30.0" width="30.0" x="877.7641698078755" y="370.06533566642804"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-B42E9911-8C80-4392-8904-3539C994652C" id="BPMNShape_sid-B42E9911-8C80-4392-8904-3539C994652C">
+        <omgdc:Bounds height="79.99999999999994" width="161.3098474958672" x="667.7641698078755" y="745.6317144957166"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-41B3294C-B188-4F51-AFEB-75415A5F765E" id="BPMNShape_sid-41B3294C-B188-4F51-AFEB-75415A5F765E">
+        <omgdc:Bounds height="29.999999999999943" width="30.0" x="814.4488733393507" y="781.6842908488261"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-5BB55E0D-D6A3-4FCC-8653-BAE7FB515B1E" id="BPMNShape_sid-5BB55E0D-D6A3-4FCC-8653-BAE7FB515B1E">
+        <omgdc:Bounds height="82.0" width="157.0" x="640.9190935558091" y="205.0"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-2487CBDB-4632-4B33-A480-EDC500E6C0C3" id="BPMNShape_sid-2487CBDB-4632-4B33-A480-EDC500E6C0C3">
+        <omgdc:Bounds height="30.0" width="30.0" x="877.7641698078755" y="251.24963367695204"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-9836F998-1615-423C-B758-DFA71F4820E8" id="BPMNShape_sid-9836F998-1615-423C-B758-DFA71F4820E8">
+        <omgdc:Bounds height="30.0" width="30.0" x="785.7759678132489" y="136.59487337725383"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-E924E390-BE71-4574-8156-C89D07B6B111" id="BPMNShape_sid-E924E390-BE71-4574-8156-C89D07B6B111">
+        <omgdc:Bounds height="30.0" width="30.0" x="782.9683403468468" y="251.24963367695204"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-479AB990-1A44-4749-839A-AE80C17A72E3" id="BPMNShape_sid-479AB990-1A44-4749-839A-AE80C17A72E3">
+        <omgdc:Bounds height="30.0" width="30.0" x="785.8277395591954" y="370.06533566642804"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-B2BA4B9A-11DE-443D-9BBC-7962523F3302" id="BPMNShape_sid-B2BA4B9A-11DE-443D-9BBC-7962523F3302">
+        <omgdc:Bounds height="28.0" width="28.0" x="1185.0" y="233.3598710049452"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-5871BCD1-9FF0-4870-80A3-24C8A04069A1" id="BPMNShape_sid-5871BCD1-9FF0-4870-80A3-24C8A04069A1">
+        <omgdc:Bounds height="28.0" width="28.0" x="1312.7641698078755" y="73.81699964331375"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-182603B1-1ACA-40C3-809C-A4A7E115568F" id="BPMNShape_sid-182603B1-1ACA-40C3-809C-A4A7E115568F">
+        <omgdc:Bounds height="80.0" width="100.0" x="1167.7641698078755" y="47.81699964331375"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-ED4C308F-F9D4-41CA-9076-906C824DBBD8" id="BPMNShape_sid-ED4C308F-F9D4-41CA-9076-906C824DBBD8">
+        <omgdc:Bounds height="80.0" width="100.0" x="195.0" y="207.3598710049452"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="sid-0447876F-F5A8-42CC-90D7-5C559B7DA234" id="BPMNShape_sid-0447876F-F5A8-42CC-90D7-5C559B7DA234">
+        <omgdc:Bounds height="30.0" width="30.0" x="1102.7149954090796" y="68.83990786321527"></omgdc:Bounds>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="sid-354442CD-613F-437F-ACE4-6A1378E9EFC3" id="BPMNEdge_sid-354442CD-613F-437F-ACE4-6A1378E9EFC3">
+        <omgdi:waypoint x="800.024017303611" y="362.4076984887172"></omgdi:waypoint>
+        <omgdi:waypoint x="972.7641698078755" y="362.4076984887172"></omgdi:waypoint>
+        <omgdi:waypoint x="972.7641698078755" y="266.1785466056417"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-741B9A73-C91B-4227-8DAA-E63056DB7492" id="BPMNEdge_sid-741B9A73-C91B-4227-8DAA-E63056DB7492">
+        <omgdi:waypoint x="567.7641698078755" y="266.21141179857966"></omgdi:waypoint>
+        <omgdi:waypoint x="567.7641698078755" y="362.4076984887172"></omgdi:waypoint>
+        <omgdi:waypoint x="638.7641698078755" y="362.4076984887172"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-8E3782FF-23A4-49B8-88B4-09BAA1CA245D" id="BPMNEdge_sid-8E3782FF-23A4-49B8-88B4-09BAA1CA245D">
+        <omgdi:waypoint x="815.77773739787" y="385.06533566642804"></omgdi:waypoint>
+        <omgdi:waypoint x="877.7641698078755" y="385.06533566642804"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-9612124B-DBE4-4CB3-BD85-19D9659A7FA0" id="BPMNEdge_sid-9612124B-DBE4-4CB3-BD85-19D9659A7FA0">
+        <omgdi:waypoint x="472.7141682978331" y="246.26999335134542"></omgdi:waypoint>
+        <omgdi:waypoint x="547.7641698078755" y="246.26999335134542"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-20F6B9AF-2F40-46D9-B0AA-740FEB3B63F3" id="BPMNEdge_sid-20F6B9AF-2F40-46D9-B0AA-740FEB3B63F3">
+        <omgdi:waypoint x="812.9183383138744" y="266.24963367695204"></omgdi:waypoint>
+        <omgdi:waypoint x="877.7641698078755" y="266.24963367695204"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-616D4B7A-3D85-4D81-8F72-3194300F4C02" id="BPMNEdge_sid-616D4B7A-3D85-4D81-8F72-3194300F4C02">
+        <omgdi:waypoint x="1117.3192120482522" y="247.3259457255856"></omgdi:waypoint>
+        <omgdi:waypoint x="1185.0" y="247.35405624876034"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-8D65B5DD-59D2-4AF7-9A39-CD10B3DAA75C" id="BPMNEdge_sid-8D65B5DD-59D2-4AF7-9A39-CD10B3DAA75C">
+        <omgdi:waypoint x="68.18581950507985" y="247.1922053333932"></omgdi:waypoint>
+        <omgdi:waypoint x="195.0" y="247.3124580436255"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-03C53F81-7F69-45E8-B9F9-4021D23999CC" id="BPMNEdge_sid-03C53F81-7F69-45E8-B9F9-4021D23999CC">
+        <omgdi:waypoint x="800.0240173037427" y="130.00000000000003"></omgdi:waypoint>
+        <omgdi:waypoint x="972.7641698078755" y="130.00000000000003"></omgdi:waypoint>
+        <omgdi:waypoint x="972.7641698078755" y="226.26999335134542"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-0B2EF226-36B6-4100-B8AC-2A1E40A85A99" id="BPMNEdge_sid-0B2EF226-36B6-4100-B8AC-2A1E40A85A99">
+        <omgdi:waypoint x="587.6787156673452" y="246.2344503533303"></omgdi:waypoint>
+        <omgdi:waypoint x="640.9190935557948" y="246.1396656164507"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-158D397E-65C2-430C-97B8-44CF8DC3381E" id="BPMNEdge_sid-158D397E-65C2-430C-97B8-44CF8DC3381E">
+        <omgdi:waypoint x="815.7259656543544" y="151.59487337725383"></omgdi:waypoint>
+        <omgdi:waypoint x="877.7641698078755" y="151.59487337725383"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-BBB6B4F9-AD68-459B-BAE7-AF218A61AB63" id="BPMNEdge_sid-BBB6B4F9-AD68-459B-BAE7-AF218A61AB63">
+        <omgdi:waypoint x="294.9499999998841" y="247.34225694389133"></omgdi:waypoint>
+        <omgdi:waypoint x="404.9999999998458" y="247.30348839551155"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-1EA35E91-49FF-47DD-886A-A316EF81C505" id="BPMNEdge_sid-1EA35E91-49FF-47DD-886A-A316EF81C505">
+        <omgdi:waypoint x="1267.7141698078237" y="87.81699964331375"></omgdi:waypoint>
+        <omgdi:waypoint x="1312.7641698078755" y="87.81699964331375"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-8E1F0139-C103-4CF7-80AC-EE44A74926ED" id="BPMNEdge_sid-8E1F0139-C103-4CF7-80AC-EE44A74926ED">
+        <omgdi:waypoint x="1132.6649942113245" y="83.83990786321527"></omgdi:waypoint>
+        <omgdi:waypoint x="1167.7641698078749" y="83.83990786321527"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-B71F72DC-74AB-4AAA-AC5A-F5E905F3306D" id="BPMNEdge_sid-B71F72DC-74AB-4AAA-AC5A-F5E905F3306D">
+        <omgdi:waypoint x="567.7641698078755" y="226.26999335134542"></omgdi:waypoint>
+        <omgdi:waypoint x="567.7641698078755" y="130.00000000000003"></omgdi:waypoint>
+        <omgdi:waypoint x="638.7641698078171" y="130.00000000000003"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-38382C0B-46F8-4BD9-8A5D-4F83BF3667B5" id="BPMNEdge_sid-38382C0B-46F8-4BD9-8A5D-4F83BF3667B5">
+        <omgdi:waypoint x="992.7032485735921" y="246.26999335134542"></omgdi:waypoint>
+        <omgdi:waypoint x="1050.0" y="246.26999335134542"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="sid-718595F6-7E40-4D84-A55F-9750A2333B86" id="BPMNEdge_sid-718595F6-7E40-4D84-A55F-9750A2333B86">
+        <omgdi:waypoint x="797.8690935557979" y="246.08360524990812"></omgdi:waypoint>
+        <omgdi:waypoint x="952.7641698078755" y="246.24870176549703"></omgdi:waypoint>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

@@ -1,0 +1,27 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+# Repositories to retrieve code artifacts from
+repositories:
+  docker_hub: https://registry.hub.docker.com/
+
+node_types:
+  tosca.nodes.Container.Database.MySQL:
+    description: >
+      MySQL container from the Docker Hub repository
+    derived_from: tosca.nodes.Container.Database
+    requirements:
+      - volume:
+          capability: tosca.capabilities.Attachment
+          relationship: tosca.relationships.AttachesTo
+  
+  tosca.nodes.Container.WebApplication.Wordpress:
+    description: >
+      Wordpress container from the Docker Hub repository
+    derived_from: tosca.nodes.Container.WebApplication
+    requirements:
+      - wordpress_db_host:
+          capability: tosca.capabilities.Endpoint.Database
+          relationship: tosca.relationships.ConnectsTo
+      - volume:
+          capability: tosca.capabilities.Attachment
+          relationship: tosca.relationships.AttachesTo
