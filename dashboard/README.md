@@ -2,6 +2,14 @@
 
 The Dashboard is a web application running a Vue.js frontend on top of a PHP Laravel backend. 
 
+## Description
+
+The Dashboard incorporates two components of TORCH:
+
+* The **TOSCA Modeller**, whch is a Vue.js component available [here](resources/js/components/ToscaGraphModeler.vue).
+
+* The **TOSCA Processor**, which is a Python-based component available [here](public/json4tosca-parse).
+
 ## Requirements
 
 You need the following dependencies to run the dashboard:
