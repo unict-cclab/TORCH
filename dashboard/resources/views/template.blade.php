@@ -31,7 +31,8 @@
                         <table class="table table-striped">
                             <thead>
                                 <tr>
-                                    <th scope="col">Deployment Unit</th>
+                                    <!-- <th scope="col">Deployment Unit</th> -->
+				    <th scope="col">TOSCA Node</th>
                                     <th scope="col">Status</th>
                                 </tr>
                             </thead>
@@ -49,16 +50,41 @@
                             <form method="POST" action="{{ route('bpmn-engine') }}">
                                 @csrf
                                 <div class="form-group row">
+                                    <label for="cloudProvider" class="col-md-6 col-form-label">Cloud Provider</label>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="cloudProvider" id="azure" value="azure" required>
+                                            <label class="form-check-label" for="azure">Azure</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="cloudProvider" id="openstack" value="openstack" required>
+                                            <label class="form-check-label" for="swarm">OpenStack</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
                                     <label for="clusterPlatform" class="col-md-6 col-form-label">Cluster Platform</label>
                                     <div class="col-md-6">
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="clusterPlatform" id="kubernetes" value="kubernetes" required>
+                                            <input class="form-check-input" type="radio" name="clusterPlatform" id="kubernetes" value="kubernetes">
                                             <label class="form-check-label" for="kubernetes">Kubernetes</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="clusterPlatform" id="swarm" value="swarm" required>
+                                            <input class="form-check-input" type="radio" name="clusterPlatform" id="swarm" value="swarm">
                                             <label class="form-check-label" for="swarm">Swarm</label>
                                         </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label for="bpmnEngineEndpoint" class="col-md-6 col-form-label">BPMN Engine Endpoint </label>
+                                    <div class="col-md-6">
+                                    <input type="text" class="form-control" name="bpmnEngineEndpoint" id="bpmnEngineEndpoint" value="{{ old('bpmnEngineEndpoint')? old('bpmnEngineEndpoint') : 'http://localhost:8080' }}">
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label for="serviceBrokerEndpoint" class="col-md-6 col-form-label">Service Broker Endpoint </label>
+                                    <div class="col-md-6">
+                                    <input type="text" class="form-control" name="serviceBrokerEndpoint" id="serviceBrokerEndpoint" value="{{ old('serviceBrokerEndpoint')? old('serviceBrokerEndpoint') : 'http://localhost:9000' }}">
                                     </div>
                                 </div>
                                 <div class="form-group row">

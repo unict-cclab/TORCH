@@ -15,7 +15,9 @@ class BPMNEngineController extends Controller
     {
         $template = Template::findOrFail($request->templateID);
 
-        $endpoint = env("BPMN_ENGINE", "")."/flowable-rest/service/runtime/process-instances";
+        //$endpoint = env("BPMN_ENGINE", "")."/flowable-rest/service/runtime/process-instances";
+	$endpoint = $request->bpmnEngineEndpoint."/flowable-rest/service/runtime/process-instances";
+        $template->bpmn_endpoint = $request->bpmnEngineEndpoint;
         
         $retryCounter =  (object)[];
         $retryCounter->name = "retryCounter";
@@ -27,24 +29,42 @@ class BPMNEngineController extends Controller
         
         $checkPeriod =  (object)[];
         $checkPeriod->name = "checkPeriod";
-        $checkPeriod->value = "PT".$request->checkPeriod."S";        
+        $checkPeriod->value = "PT".$request->checkPeriod."S";
         
         $serviceBrokerURI =  (object)[];
         $serviceBrokerURI->name = "serviceBrokerURI";
-        $serviceBrokerURI->value = env("SERVICE_BROKER_URI", "");
+        //$serviceBrokerURI->value = env("SERVICE_BROKER_URI", "");
+	$serviceBrokerURI->value = $request->serviceBrokerEndpoint;
         
+	$cloudProvider = (object)[];
+	$cloudProvider->name = "provider";
+	$cloudProvider->value = $request->cloudProvider;
+
         $jsonInput =  (object)[];
         $jsonInput->name = "jsonInput";
         //$jsonInput->value = $request->json_graph;
-        
-        $cluster = json_decode('{"name":"cluster","type":"resource","category":"cluster","requirements":{"create":[],"configure":[],"start":[]},"properties":{"platform":"'.$request->clusterPlatform.'"}}');
+
         $template_json = json_decode($template->json_graph);
-        array_push($template_json, $cluster);
-        foreach ($template_json as $el){
-            if (strcmp($el->type,"du") == 0) array_push($el->requirements->create,"cluster.create");
-        }
-        $jsonInput->value = json_encode($template_json);
+
+	if(isset($request->clusterPlatform)) {
+	        $clusterPlatform = (object)[];
+        	$clusterPlatform->name = "platform";
+	        $clusterPlatform->value = $request->clusterPlatform;
         
+                $cluster = json_decode('{"name":"cluster","type":"resource","category":"cluster","requirements":{"create":[],"configure":[],"start":[]},"properties":{"'.$clusterPlatform->name.'":"'.$clusterPlatform->value.'"}}');
+        	array_push($template_json, $cluster);
+	}
+
+        foreach ($template_json as $el) {
+	    if (strcmp($el->type,"resource") == 0) $el->properties->{$cloudProvider->name} = $cloudProvider->value;
+	    else if (strcmp($el->type,"du") == 0) array_push($el->requirements->create,"cluster.create");
+        }
+
+        $jsonInput->value = json_encode($template_json);
+        /* TO DO: AGGIORNAMENTO DEL JSON NEL TEMPLATE CON IL NODO CLUSTER */
+        $template->json_graph = json_encode($template_json);
+
+
         // Make Post Fields Array
         $data = [
             'processDefinitionKey' => 'bpmn4tosca-overallXX',
@@ -71,11 +91,10 @@ class BPMNEngineController extends Controller
                 // "user: rest-admin:test"
             )
         ));
-        
+
         $response = curl_exec($curl);
         $err = curl_error($curl);
-        
-        
+
         curl_close($curl);
 
         if($response)
@@ -97,7 +116,7 @@ class BPMNEngineController extends Controller
         else 
         {
             return redirect()->back()->with('error', $err? $err : TRUE)->withInput();
-        }
+        } 
 
     }
     

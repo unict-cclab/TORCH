@@ -47,8 +47,8 @@ class ToscaGraph(object):
                 for r_key, r_value in vertex_value.relationships.items():
                     nodeRequirementList.append((r_value.name, r_key.type))
                 if nodeRequirementList:
-                    self._basicrequirements[vertex_key] = nodeRequirementList    
- 
+                    self._basicrequirements[vertex_key] = nodeRequirementList
+
         return self._basicrequirements
 
     @property
@@ -88,13 +88,15 @@ class ToscaGraph(object):
                     for nodereq in nodeRequirementList:
                         if nodereq[0] == nodecreate:
                             reqlist.append(req + "_create")
+                        elif nodereq[0] not in self._basicrequirements.keys():
+                            reqlist.append(nodereq[0] + "_create")
                         else:
                             reqlist.append(nodereq[0] + "_start")
                             if self._requirements.__contains__(req + "_configure"):
                                 self._requirements[req + "_configure"].append(nodereq[0] + "_create")
                             else:
                                 self._requirements[req + "_configure"] = [nodereq[0] + "_create"]
-                            
+
                     self._requirements[req + "_configure"] = reqlist
                     # start
                     self._requirements[req + "_start"] = [req + "_configure"]

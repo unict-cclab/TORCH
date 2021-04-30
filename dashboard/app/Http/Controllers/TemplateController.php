@@ -120,7 +120,10 @@ class TemplateController extends Controller
     {
         if (strcmp($template->process_id,"")==0) $template_info = '';
         else {
-            $endpoint = env("BPMN_ENGINE", "");
+	    /********* TO DO: AGGIORNARE BPMN ENDPOINT  *********/
+            //$endpoint = env("BPMN_ENGINE", "");
+	    $endpoint = $template->bpmn_endpoint;
+
             // TODO: cycle directly on history with size > 100 so that you find all DUs with their state
             $curl = curl_init();
         
@@ -133,7 +136,7 @@ class TemplateController extends Controller
                 CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
                 CURLOPT_CUSTOMREQUEST => "GET",
                 CURLOPT_HTTPHEADER => array(
-                    // Set Here Your Requesred Headers
+                    // Set Here Your Requested Headers
                     'Content-Type: application/json',
                 ),
             ));
@@ -167,30 +170,83 @@ class TemplateController extends Controller
                                     $template_info[$nodename] = "IN PROGRESS";
                                     foreach ($process->variables as $variable)
                                     {
-                                        if(strcmp($variable->name,"configureDeploymentUnitStatus") == 0)
-                                        {
-                                            if (strcmp($variable->value,"ok") == 0)
-                                            {
-                                                $template_info[$nodename] = "COMPLETED";
-                                                break;
-                                            }
-                                        }
-                                        elseif(strcmp($variable->name,"createDeploymentUnitResponseStatusCode") == 0)
-                                        {
-                                            if ($variable->value == 500)
-                                            {
-                                                $template_info[$nodename] = "FAILED";
-                                                break;
-                                            }
-                                        }
-                                        elseif(strcmp($variable->name,"checkDeploymentUnitStatus") == 0)
-                                        {
-                                            if ($variable->value == 500)
-                                            {
-                                                $template_info[$nodename] = "FAILED";
-                                                break;
-                                            }
-                                        }
+					if(strcmp($node->type, "du") == 0) {
+                                                if(strcmp($variable->name,"configureDeploymentUnitStatus") == 0)
+                                                {
+                                                    if (strcmp($variable->value,"ok") == 0)
+                                                    {
+                                                        $template_info[$nodename] = "COMPLETED";
+                                                        break;
+                                                    }
+                                                }
+                                                elseif(strcmp($variable->name,"createDeploymentUnitResponseStatusCode") == 0)
+                                                {
+                                                    if ($variable->value == 500)
+                                                    {
+                                                        $template_info[$nodename] = "FAILED";
+                                                    break;
+                                                    }
+                                                }
+                                                elseif(strcmp($variable->name,"checkDeploymentUnitResponseStatusCode") == 0)
+                                                {
+                                                    if ($variable->value == 500)
+                                                    {
+                                                        $template_info[$nodename] = "FAILED";
+                                                        break;
+                                                    }
+                                                }
+					}
+					elseif(strcmp($node->type, "resource") == 0)
+					{
+                                                if(strcmp($variable->name,"createResourceResponseStatusCode") == 0)
+                                                {
+                                                    if ($variable->value == 500)
+                                                    {
+                                                        $template_info[$nodename] = "FAILED";
+                                                        break;
+                                                    }
+                                                }
+                                                elseif(strcmp($variable->name,"resourceStatus") == 0)
+                                                {
+                                                    if (strcmp($variable->value,"ok") == 0)
+                                                    {
+                                                        $template_info[$nodename] = "COMPLETED";
+                                                        break;
+                                                    }
+                                                    elseif (strcmp($variable->value,"error") == 0)
+                                                    {
+                                                        $template_info[$nodename] = "FAILED";
+                                                        break;
+                                                    }
+                                                }
+					}
+					elseif(strcmp($node->type, "package") == 0)
+					{
+                                                if(strcmp($variable->name,"createPackageResponseStatusCode") == 0)
+                                                {
+                                                    if ($variable->value == 500)
+                                                    {
+                                                        $template_info[$nodename] = "FAILED";
+                                                        break;
+                                                    }
+                                                }
+                                                elseif(strcmp($variable->name,"configurePackageResponseStatusCode") == 0)
+                                                {
+                                                    if ($variable->value == 500)
+                                                    {
+                                                        $template_info[$nodename] = "FAILED";
+                                                        break;
+                                                    }
+                                                }
+                                                elseif(strcmp($variable->name,"startPackageStatus") == 0)
+                                                {
+                                                    if (strcmp($variable->value,"ok") == 0)
+                                                    {
+                                                        $template_info[$nodename] = "COMPLETED";
+                                                        break;
+                                                    }
+						}
+					}
                                     }
                                     break;
                                 }

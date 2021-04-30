@@ -13,7 +13,7 @@ class Template extends Model
      * @var array
      */
     protected $fillable = [
-        'name', 'user_id', 'yaml_template', 'json_graph','process_id'
+        'name', 'user_id', 'yaml_template', 'json_graph','process_id', 'bpmn_endpoint'
     ];
 
     /**
