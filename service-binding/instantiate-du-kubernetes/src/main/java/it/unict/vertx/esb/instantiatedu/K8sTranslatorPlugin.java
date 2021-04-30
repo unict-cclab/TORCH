@@ -138,9 +138,12 @@ public class K8sTranslatorPlugin implements TranslatorPlugin {
             String value = entry.getValue();
             if (value.equals("true")) value = "\"true\"";
             if (value.equals("false")) value = "\"false\"";
+//            s = s.concat("        - name: " + entry.getKey() + "\n" + //Removed: toUpperCase()
+//                    "          value: " + value  + "\n"
+//            );
             s = s.concat("        - name: " + entry.getKey().toUpperCase() + "\n" +
                     "          value: " + value  + "\n"
-            );
+            );     
         }
         // DEPRECATED        
 //        for (Map.Entry<String,String> entry : c.getExt_requirements().entrySet())

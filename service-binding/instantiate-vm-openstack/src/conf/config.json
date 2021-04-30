@@ -9,9 +9,10 @@
   "username": "tosca",
   "password": "tosca_user_pass",
   "flavor.name": "m1.small",
-  "image.name": "ubuntu-14.04",
+  "image.name": "ubuntu-16.04",
   "security.group": "sec-group",
-  "key.name": "toscaKeys",
+  "key.name": "toscaKey",
+  "admin.username": "ubuntu",
   "admin.password": "admin_pass",
   "network.name": "provider"
 }

@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.Configuration;
 import io.kubernetes.client.apis.AppsV1Api;
@@ -65,8 +64,8 @@ public class InstantiateDUKubernetesAPIVerticle extends AbstractVerticle impleme
 
 		String clusterEndpoint = (String) properties.get("cluster.endpoint");
 		String clusterCert = (String) properties.get("cluster.cert");
-		String clusterRsa = (String) properties.get("cluster.rsa");
-		String clusterPem = (String) properties.get("cluster.pem");
+		String clusterKey = (String) properties.get("cluster.key");
+		String clusterCa = (String) properties.get("cluster.ca");
 
 		Boolean isRetry = (Boolean) properties.get("isRetry");
 		
@@ -81,9 +80,9 @@ public class InstantiateDUKubernetesAPIVerticle extends AbstractVerticle impleme
 
 			ApiClient client = ClientBuilder.standard()
 					.setBasePath(clusterEndpoint)
-					.setAuthentication(new ClientCertificateAuthentication(clusterCert.getBytes("UTF-8"), clusterRsa.getBytes("UTF-8")))
+					.setAuthentication(new ClientCertificateAuthentication(clusterCert.getBytes("UTF-8"), clusterKey.getBytes("UTF-8")))
 					.setVerifyingSsl(true)
-					.setCertificateAuthority(clusterPem.getBytes("UTF-8"))
+					.setCertificateAuthority(clusterCa.getBytes("UTF-8"))
 					.build();
 
 			Configuration.setDefaultApiClient(client);
@@ -121,10 +120,10 @@ public class InstantiateDUKubernetesAPIVerticle extends AbstractVerticle impleme
 		String id = (String) properties.get("id");
 		String clusterEndpoint = (String) properties.get("cluster.endpoint");
 		String clusterCert = (String) properties.get("cluster.cert");
-		String clusterRsa = (String) properties.get("cluster.rsa");
-		String clusterPem = (String) properties.get("cluster.pem");
+		String clusterKey = (String) properties.get("cluster.key");
+		String clusterCa = (String) properties.get("cluster.ca");
 
-		String status; // Pending, Failed, Unknown
+//		String status; // Pending, Failed, Unknown
 		InstantiateDU.Status mappedStatus; //= InstantiateDU.Status.UNRECOGNIZED;
 		JsonObject responseBody = new JsonObject();
 		int responseCode = 200;
@@ -132,9 +131,9 @@ public class InstantiateDUKubernetesAPIVerticle extends AbstractVerticle impleme
 		try {
 			ApiClient client = ClientBuilder.standard()
 					.setBasePath(clusterEndpoint)
-					.setAuthentication(new ClientCertificateAuthentication(clusterCert.getBytes("UTF-8"), clusterRsa.getBytes("UTF-8")))
+					.setAuthentication(new ClientCertificateAuthentication(clusterCert.getBytes("UTF-8"), clusterKey.getBytes("UTF-8")))
 					.setVerifyingSsl(true)
-					.setCertificateAuthority(clusterPem.getBytes("UTF-8"))
+					.setCertificateAuthority(clusterCa.getBytes("UTF-8"))
 					.build();
 
 			Configuration.setDefaultApiClient(client);
@@ -160,7 +159,7 @@ public class InstantiateDUKubernetesAPIVerticle extends AbstractVerticle impleme
 						responseBody.put("status", mappedStatus.value());
 						break;
 					}
-					else if(dc.getType().equals("Progressing")   && dc.getStatus().equals("False"))
+					else if(dc.getType().equals("Progressing") && dc.getStatus().equals("False"))
 					{
 						// FAILED
 						mappedStatus = InstantiateDU.Status.ERROR;
@@ -180,7 +179,7 @@ public class InstantiateDUKubernetesAPIVerticle extends AbstractVerticle impleme
 		} catch (Exception e)
 		{
 			mappedStatus = InstantiateDU.Status.ERROR;
-			status = "Check Error";
+			responseBody.put("status", mappedStatus);
 			responseBody.put("message", "Error while checking DU status");
 			responseBody.put("details", e.getStackTrace().toString());
 			responseCode = 500;

@@ -9,6 +9,7 @@ import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.messages.*;
 
+import com.spotify.docker.client.messages.mount.Mount;
 import com.spotify.docker.client.messages.swarm.*;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -19,6 +20,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 import it.unict.vertx.esb.common.Parser;
 import it.unict.vertx.esb.common.translator.utils.Container;
 import it.unict.vertx.esb.common.translator.utils.DeploymentUnit;
+import it.unict.vertx.esb.common.translator.utils.Volume;
 import it.unict.vertx.esb.du.InstantiateDU;
 
 public class InstantiateDUSwarmAPIVerticle extends AbstractVerticle implements InstantiateDU {
@@ -66,10 +68,10 @@ public class InstantiateDUSwarmAPIVerticle extends AbstractVerticle implements I
 
 		String clusterEndpoint = (String) properties.get("cluster.endpoint");
 		String clusterCert = (String) properties.get("cluster.cert");
-		String clusterRsa = (String) properties.get("cluster.rsa");
-		String clusterPem = (String) properties.get("cluster.pem");
-		
-		// Boolean isRetry = (Boolean) properties.get("isRetry");
+		String clusterKey = (String) properties.get("cluster.key");
+		String clusterCa = (String) properties.get("cluster.ca");
+
+//		Boolean isRetry = (Boolean) properties.get("isRetry");
 		
 		String deploymentId = "";
 		int responseCode = 202;
@@ -90,7 +92,7 @@ public class InstantiateDUSwarmAPIVerticle extends AbstractVerticle implements I
 					.build();
 			try {
 				// TODO: add parameter to the node to name the network (same can be done with Kubernetes, adding a namespace)
-				// NOTE: the paramemeter maybe the name of the app in the dashboard
+				// NOTE: the parameter maybe the name of the app in the dashboard
 				docker.inspectNetwork(network);
 			} catch (Exception e) {
 				NetworkConfig networkConfig = NetworkConfig.builder()
@@ -103,7 +105,12 @@ public class InstantiateDUSwarmAPIVerticle extends AbstractVerticle implements I
 				docker.createNetwork(networkConfig);
 			}
 
-			// TODO: Verify if the library allows to deal with multiple containers per service
+//			if (isRetry != null && isRetry == true)
+//				try {
+//					docker.removeService(deploymentUnit.getName());
+//				} catch (Exception e) {
+//				}
+
 			Container c = deploymentUnit.getContainers().get(0);
 
 			List<String> envs = new ArrayList<>();
@@ -123,10 +130,24 @@ public class InstantiateDUSwarmAPIVerticle extends AbstractVerticle implements I
 				}
 				envs.add(envVar.getKey() + "=" + envVar.getValue());
 			}
-
-			final TaskSpec taskSpec = TaskSpec.builder()
-					.containerSpec(ContainerSpec.builder().image(c.getImage()).env(envs).build())
-					.build();
+			
+			List<Mount> mountList = new ArrayList<>();
+			for (Volume v : c.getVolumes()) {
+				mountList.add(Mount.builder()
+						.target(v.getProperties().get("location"))
+						.type("volume").build());
+			}
+			
+			final TaskSpec taskSpec;
+			if (mountList.size() > 0) {
+				taskSpec = TaskSpec.builder()
+						.containerSpec(ContainerSpec.builder().image(c.getImage()).env(envs).mounts(mountList).build())
+						.build();
+			} else {
+				taskSpec = TaskSpec.builder()
+						.containerSpec(ContainerSpec.builder().image(c.getImage()).env(envs).build())
+						.build();
+			}
 
 			final ServiceSpec spec = ServiceSpec.builder().name(deploymentUnit.getName())
 					.taskTemplate(taskSpec).mode(ServiceMode.withReplicas(1L))
