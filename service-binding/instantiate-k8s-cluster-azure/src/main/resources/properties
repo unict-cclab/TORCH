@@ -1,0 +1,9 @@
+# sample management library properties file
+subscription=f2f1f31c-b5db-4dc6-be30-a480b0d441be
+client=bbc882c5-2f23-4c6a-8cde-6f4a5a266b61
+key=3xAO7FjK.LyzGCjpCoqB-405bU2NyK_eC-
+tenant=e3d27825-31e5-48d1-aa4b-4c94160ecb9c
+managementURI=https\://management.core.windows.net/
+baseURL=https\://management.azure.com/
+authURL=https\://login.windows.net/
+graphURL=https\://graph.windows.net/

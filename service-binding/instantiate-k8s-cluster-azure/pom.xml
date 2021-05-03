@@ -1,0 +1,122 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  
+  <parent>
+    <groupId>it.unict</groupId>
+    <artifactId>vertx-esb</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  
+  <artifactId>instantiate-k8s-cluster-azure</artifactId>
+  
+  <properties>
+    <main.verticle>it.unict.vertx.esb.instantiatek8scluster.InstantiateK8sClusterAzureVerticle</main.verticle>
+  </properties>
+  
+  <dependencies>
+    <dependency>
+      <groupId>it.unict</groupId>
+      <artifactId>vertx-esb-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+	<dependency>
+	    <groupId>com.azure</groupId>
+	    <artifactId>azure-identity</artifactId>
+	    <version>1.2.0</version>
+	</dependency>
+	<dependency>
+	    <groupId>com.azure.resourcemanager</groupId>
+	    <artifactId>azure-resourcemanager</artifactId>
+	    <version>2.0.0</version>
+	</dependency>
+<!-- 	<dependency> -->
+<!-- 	    <groupId>com.azure</groupId> -->
+<!-- 	    <artifactId>azure-storage-blob</artifactId> -->
+<!-- 	    <version>12.8.0</version> -->
+<!-- 	</dependency> -->
+<!-- 	<dependency> -->
+<!-- 	    <groupId>com.microsoft.sqlserver</groupId> -->
+<!-- 	    <artifactId>mssql-jdbc</artifactId> -->
+<!-- 	    <version>6.2.1.jre8</version> -->
+<!-- 	</dependency> -->
+	<!-- Only for SQL sample as it's still in preview -->
+<!-- 	<dependency> -->
+<!-- 	    <groupId>com.azure.resourcemanager</groupId> -->
+<!-- 	    <artifactId>azure-resourcemanager-sql</artifactId> -->
+<!-- 	    <version>2.0.0-beta.5</version> -->
+<!-- 	</dependency> -->
+	    <dependency>	
+	        <groupId>com.microsoft.azure</groupId>
+	        <artifactId>azure-management</artifactId>
+	        <version>0.8.0</version>
+	    </dependency>
+	    <dependency>
+	        <groupId>com.microsoft.azure</groupId>
+	        <artifactId>azure-maven-plugin</artifactId>
+	        <version>0.2.0</version>
+	    </dependency>
+	    <dependency>
+	      <groupId>io.kubernetes</groupId>
+	      <artifactId>client-java</artifactId>
+	      <version>7.0.0</version>
+	      <scope>compile</scope>
+	    </dependency>	    
+<!-- 	    <dependency> -->
+<!-- 	      <groupId>io.fabric8</groupId> -->
+<!-- 	      <artifactId>kubernetes-client</artifactId> -->
+<!-- 	      <version>4.10.3</version> -->
+<!-- 		</dependency> -->
+<!-- 		<dependency>  -->
+<!-- 		   <groupId>com.fasterxml.jackson.core</groupId>  -->
+<!-- 	       <artifactId>jackson-core</artifactId>  -->
+<!-- 		   <version>2.12.1</version>  -->
+<!-- 		</dependency>		 -->
+	    <dependency>
+      		<groupId>com.jcraft</groupId>
+	      	<artifactId>jsch</artifactId>
+	      	<version>0.1.55</version>
+	    </dependency>
+	    <dependency>
+	      <groupId>commons-net</groupId>
+	      <artifactId>commons-net</artifactId>
+	      <version>3.6</version>
+	    </dependency>
+	    <dependency>
+	      <groupId>com.github.cverges.expect4j</groupId>
+	      <artifactId>expect4j</artifactId>
+	      <version>1.6</version>
+		</dependency>	     
+	  </dependencies>
+  
+  <build>
+    <plugins>
+      <plugin>
+        <!-- plugin to create a `fat-jar` -->
+        <artifactId>maven-shade-plugin</artifactId>        
+		<executions>
+		    <execution>
+				<phase>package</phase>
+				<goals>
+				    <goal>shade</goal>
+				</goals>
+		       
+				<configuration>
+				  <filters>
+				    <filter>
+				      <artifact>*:*</artifact>
+				      <excludes>
+					<exclude>META-INF/*.SF</exclude>
+					<exclude>META-INF/*.DSA</exclude>
+					<exclude>META-INF/*.RSA</exclude>
+				      </excludes>
+				    </filter>
+				  </filters>
+				</configuration>
+			
+			</execution>
+		</executions>        
+      </plugin>
+    </plugins>
+  </build>        
+  
+</project>
