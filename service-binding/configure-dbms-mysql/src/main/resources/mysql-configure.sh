@@ -131,7 +131,8 @@ then
   sudo /etc/init.d/mysql restart
 else
   sudo /etc/init.d/mysql start
-
+fi  
+  
 #json=$(printf "$template" "0" "MySQL configuration succeeded")
 json=$(printf "$template" "0" "{\\\"db.port\\\":$db_port}")
 echo "$json"

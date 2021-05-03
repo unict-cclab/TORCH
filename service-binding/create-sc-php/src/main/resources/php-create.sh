@@ -138,8 +138,8 @@ sudo rm -f /var/lib/dpkg/lock
 sudo dpkg --configure -a
 
 sudo apt-get update
-#sudo apt-get -y -q install php php-common php-curl php-cli php-pear php-gd php-mcrypt php-xmlrpc php-xml-parser libapache2-mod-php
-sudo apt-get -y -q install php5 php5-common php5-curl php5-cli php-pear php5-gd php5-mcrypt php5-xmlrpc php-xml-parser
+sudo apt-get -y -q install php php-common php-curl php-cli php-pear php-gd php-mcrypt php-xmlrpc php-xml-parser libapache2-mod-php
+#sudo apt-get -y -q install php5 php5-common php5-curl php5-cli php-pear php5-gd php5-mcrypt php5-xmlrpc php-xml-parser
 
 rm -rf "${LOCK}"
 echo "$NAME released apt lock"

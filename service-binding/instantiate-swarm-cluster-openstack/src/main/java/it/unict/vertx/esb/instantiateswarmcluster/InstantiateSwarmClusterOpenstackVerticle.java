@@ -13,7 +13,8 @@ public class InstantiateSwarmClusterOpenstackVerticle extends MicroServiceVertic
 	    vertx.deployVerticle(InstantiateSwarmClusterOpenstackAPIVerticle.class.getName(), new DeploymentOptions().setConfig(config()));
 
 	    // Publish the services in the discovery infrastructure.
-	    publishHttpEndpoint("instantiate-swarm-cluster-openstack", config().getString("host", "localhost"), config().getInteger("http.port", 8080), ar -> {
+//	    publishHttpEndpoint("instantiate-swarm-cluster-openstack", config().getString("host", "localhost"), config().getInteger("http.port", 8080), ar -> {
+	    publishHttpEndpoint("instantiate-cluster-openstack-swarm", config().getString("host", "localhost"), config().getInteger("http.port", 8080), ar -> {	    
 	      if (ar.failed()) {
 	        ar.cause().printStackTrace();
 	      } else {

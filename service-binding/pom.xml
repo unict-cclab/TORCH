@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>it.unict</groupId>
@@ -30,10 +31,16 @@
 	    <module>create-ws-apache</module>
 	    <module>configure-ws-apache</module>
 	    <module>create-sc-php</module>
+	    <module>configure-sc-php</module>	    
 	    <module>create-wa-wordpress</module>
 	    <module>configure-wa-wordpress</module>
-	    <module>instantiate-du-kubernetes</module>
 	    <module>instantiate-k8s-cluster-openstack</module>
+	    <module>instantiate-swarm-cluster-openstack</module>
+	    <module>instantiate-du-kubernetes</module>	    
+	    <module>instantiate-du-swarm</module>
+ 	    <module>instantiate-vm-azure</module>
+ 	    <module>add-storage-azure</module>
+ 	    <module>instantiate-k8s-cluster-azure</module>
 	</modules>
 	
 	<dependencyManagement>

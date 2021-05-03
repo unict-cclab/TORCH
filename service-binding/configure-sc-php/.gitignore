@@ -1,8 +1,6 @@
 /target
 /target/**/*
 
-/resources
-
 /.settings
 /.vertx
 

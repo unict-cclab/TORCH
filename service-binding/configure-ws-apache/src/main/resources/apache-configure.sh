@@ -140,7 +140,7 @@ echo "Start apache2 whith new conf"
 sudo /etc/init.d/apache2 start
 
 #json=$(printf "$template" "0" "Apache configuration succeeded")
-json=$(printf "$template" "0" "{\\\"port\\\":$port,\\\"doc.root\\\":\\\"$doc_root\\\"}")
+json=$(printf "$template" "0" "{\\\"port\\\":$port,\\\"document.root\\\":\\\"$doc_root\\\"}")
 echo "$json"
 
 exit 0

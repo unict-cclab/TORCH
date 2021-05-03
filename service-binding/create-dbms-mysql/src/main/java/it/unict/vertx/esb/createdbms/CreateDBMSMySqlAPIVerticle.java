@@ -1,10 +1,18 @@
 package it.unict.vertx.esb.createdbms;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.OutputStreamWriter;
+import java.io.FileOutputStream;
+import java.io.File;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -16,14 +24,16 @@ import it.unict.vertx.esb.packet.create.CreateDBMS;
 
 public class CreateDBMSMySqlAPIVerticle extends AbstractVerticle implements CreateDBMS {
 	
-	private String keyName, scriptName;
+	private String keyName, keyPath, scriptName;
 
 	@Override
 	  public void start(Future<Void> future) throws Exception {
 		super.start();
 		
 		// Inizializzazione
-		keyName = System.getProperty("user.dir") + config().getString("key.name");
+//		keyName = System.getProperty("user.dir") + config().getString("key.name");
+		keyName = config().getString("key.name");
+		keyPath = System.getProperty("user.dir");
 		scriptName = System.getProperty("user.dir") + config().getString("script.name");
 				
 		Router router = Router.router(vertx);
@@ -58,12 +68,17 @@ public class CreateDBMSMySqlAPIVerticle extends AbstractVerticle implements Crea
 				.filter(s -> s.matches("^dbserver\\d?\\.address"))
 				.collect(Collectors.toSet());
 		
+		Set<String> key = properties.keySet().stream()
+				.filter(s -> s.matches("^dbserver\\d?\\.key"))
+				.collect(Collectors.toSet());		
+		
 		String dbUsername = (String) properties.get(usr.toArray()[0]);
 		String dbAddress = (String) properties.get(addr.toArray()[0]);
+		String dbKey = (String) properties.get(key.toArray()[0]);
 		
 //		String dbUsername = (String) properties.get("dbserver.username");
 //		String dbAddress = (String) properties.get("dbserver.address");
-		String dbRootPwd = (String) properties.get("db.root.pwd");
+		String dbRootPwd = (String) properties.get("root.password");
 		
 		vertx.executeBlocking(future -> {
 			String command = "nc -z -w 2 " + dbAddress + " 22 > /dev/null";
@@ -77,13 +92,41 @@ public class CreateDBMSMySqlAPIVerticle extends AbstractVerticle implements Crea
 					e.printStackTrace();
 				}
 			}
-	
+			
+			File keyFile = null;
+			BufferedWriter keyBufferedWriter = null;
+			
+			 try {
+				keyFile = File.createTempFile(keyName, ".pem", new File(keyPath));
+//				keyFile.setReadable(true, true);
+//				keyFile.setWritable(true, true);
+				
+				Set<PosixFilePermission> perms = new HashSet<>();
+				perms.add(PosixFilePermission.OWNER_READ);
+				perms.add(PosixFilePermission.OWNER_WRITE);
+
+				Files.setPosixFilePermissions(keyFile.toPath(), perms);			
+				
+				keyBufferedWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(keyFile), StandardCharsets.UTF_8));
+				keyBufferedWriter.write(dbKey);
+				keyBufferedWriter.close();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 			command = "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -i " 
-					+ keyName + " " + dbUsername + "@" + dbAddress 
+					+ keyFile.getAbsolutePath() + " " + dbUsername + "@" + dbAddress 
 					+ " 'bash -s' < " + scriptName + " '" 
 					+ dbRootPwd + "' | tail -n 1";
-			
+	
+//			command = "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -i " 
+//					+ keyName + " " + dbUsername + "@" + dbAddress 
+//					+ " 'bash -s' < " + scriptName + " '" 
+//					+ dbRootPwd + "' | tail -n 1";
+									
 			String result = executeCommand(command);
+			keyFile.delete();
 			future.complete(result);
 		}, res -> {
 			if (res.succeeded()) {

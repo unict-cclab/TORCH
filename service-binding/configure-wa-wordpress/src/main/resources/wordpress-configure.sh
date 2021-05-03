@@ -157,8 +157,8 @@ sudo rm -f /var/lib/dpkg/lock
 sudo dpkg --configure -a
 
 sudo apt-get update
-#sudo apt-get -y -q install php-mysql
-sudo apt-get -y -q install php5-mysql
+sudo apt-get -y -q install php-mysql
+#sudo apt-get -y -q install php5-mysql
 
 rm -rf "${LOCK}"
 echo "$NAME released apt lock"

@@ -1,12 +1,19 @@
 package it.unict.vertx.esb.broker;
 
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -26,20 +33,26 @@ import it.unict.vertx.esb.packet.start.StartWA;
 import it.unict.vertx.esb.packet.start.StartWS;
 
 public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
-	private HttpClient instantiateVM, addStorage;
-	private HttpClient createDBMS, configureDBMS;
-	private HttpClient createDB, configureDB;
-	private HttpClient createWS, configureWS;
-	private HttpClient createWA, configureWA;
-	private HttpClient createSC;
-//	private HttpClient instantiateDU, instantiateCluster;
-	private Map<String, HttpClient> instantiateDU, instantiateCluster;
+//	private HttpClient instantiateVM, addStorage;
+//	private HttpClient createDBMS, configureDBMS;
+//	private HttpClient createDB, configureDB;
+//	private HttpClient createWS, configureWS;
+//	private HttpClient createWA, configureWA;
+//	private HttpClient createSC;
 	
+	private Map<String, HttpClient> instantiateDU, instantiateCluster;
+	private Map<String, HttpClient> instantiateVM, addStorage;
+	private Map<String, Map<String, HttpClient>> create, configure;
+	
+	private String discoveryFilePath;
 	private int statusCode;
 	
 	@Override
 	  public void start(Future<Void> future) throws Exception {
 		super.start();
+		
+		// Inizializzazione		
+		discoveryFilePath = System.getProperty("user.dir") + config().getString("discovery.file");		
 		
 		discoverServices(future);
 		
@@ -74,7 +87,144 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 	        });
 	}
 	
-	private void discoverServices(Future<Void> future) {
+	private void discoverServices(Future<Void> future) {	
+		
+		try {
+			Reader reader = Files.newBufferedReader(Paths.get(discoveryFilePath));
+			ObjectMapper objectMapper = new ObjectMapper();
+			
+			JsonNode tree = objectMapper.readTree(reader);
+			if (tree.isArray()) {				
+				instantiateCluster = new HashMap<String, HttpClient>();
+				instantiateDU = new HashMap<String, HttpClient>();
+				instantiateVM = new HashMap<String, HttpClient>();
+				addStorage = new HashMap<String, HttpClient>();
+				
+				create = new HashMap<String, Map<String, HttpClient>>();
+				configure = new HashMap<String, Map<String, HttpClient>>();				
+				
+				for (JsonNode node : tree) {
+					final String category = node.get("category").asText();
+					final String name = node.get("name").asText();
+					final String type = node.get("type").asText();
+					
+					switch(type) {
+					case "resource":
+						switch(category) {
+						case "vm":
+							// Discovery del servizio InstantiateVM
+							HttpEndpoint.getClient(
+									discovery,
+									new JsonObject().put("name", "instantiate-vm-" + name),
+									client -> {
+										if (client.failed()) {
+											future.fail("InstantiateVM-" + name + " discovery failed: " + client.cause());
+										} else {
+											instantiateVM.put(name, client.result());
+											System.out.println("InstantiateVM-" + name + " discovery succeeded");
+										}
+									});
+							break;
+						case "storage":
+							// Discovery del servizio AddStorage
+							HttpEndpoint.getClient(
+									discovery,
+									new JsonObject().put("name", "add-storage-" + name),
+									client -> {
+										if (client.failed()) {
+											future.fail("AddStorage-" + name + " discovery failed: "
+													+ client.cause());
+										} else {
+											addStorage.put(name, client.result());
+											System.out.println("AddStorage-" + name + " discovery succeeded");
+										}
+									});							
+							break;
+						case "cluster":
+							// Discovery del servizio InstantiateCluster
+							HttpEndpoint.getClient(
+									discovery,
+									new JsonObject().put("name", "instantiate-cluster-" + name),
+									client -> {
+										if (client.failed()) {
+											future.fail("InstantiateCluster-" + name + " discovery failed: " + client.cause());
+										} else {
+											instantiateCluster.put(name, client.result());
+											System.out.println("InstantiateCluster-" + name + " discovery succeeded");
+										}
+									});
+							break;
+						default:
+						}
+						break;
+					case "package":						
+						// Discovery del servizio Create Package
+						HttpEndpoint.getClient(
+								discovery,
+								new JsonObject().put("name", "create-" + category + "-" + name),
+								client -> {
+									if (client.failed()) {
+										future.fail("Create-" + category + "-" + name + " discovery failed: "
+												+ client.cause());
+									} else {
+										if(create.isEmpty() || !create.containsKey(category)) {
+											Map<String, HttpClient> createMap = new HashMap<String, HttpClient>();
+											createMap.put(name, client.result());
+											create.put(category, createMap);
+										} else {
+											Map<String, HttpClient> createMap = create.get(category);
+											createMap.put(name, client.result());
+										}
+										System.out.println("Create-" + category + "-" + name + " discovery succeeded");
+									}
+								});
+				
+						// Discovery del servizio Configure Package
+						HttpEndpoint
+								.getClient(
+										discovery,
+										new JsonObject().put("name", "configure-" + category + "-" + name),
+										client -> {
+											if (client.failed()) {
+												future.fail("Configure-" + category + "-" + name + " discovery failed: "
+														+ client.cause());
+											} else {
+												if(configure.isEmpty() || !configure.containsKey(category)) {
+													Map<String, HttpClient> configureMap = new HashMap<String, HttpClient>();
+													configureMap.put(name, client.result());
+													configure.put(category, configureMap);
+												} else {
+													Map<String, HttpClient> configureMap = configure.get(category);
+													configureMap.put(name, client.result());
+												}			
+												System.out.println("Configure-" + category + "-" + name + " discovery succeeded");
+											}
+										});						
+						break;
+					case "du":
+						// Discovery del servizio InstantiateDU
+						final String fName = name;
+						HttpEndpoint.getClient(
+								discovery,
+								new JsonObject().put("name", "instantiate-du-" + fName),
+								client -> {
+									if (client.failed()) {
+										future.fail("InstantiateDU-" + fName + " discovery failed: " + client.cause());
+									} else {
+										instantiateDU.put(fName, client.result());
+										System.out.println("InstantiateDU-" + fName + " discovery succeeded");
+									}
+								});						
+						break;
+					default:
+					}						
+				}
+				
+			}			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 //		// Discovery del servizio InstantiateVM
 //		HttpEndpoint.getClient(
 //				discovery,
@@ -87,66 +237,66 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 //						System.out.println("InstantiateVM discovery succeeded");
 //					}
 //				});
-		
-		instantiateCluster = new HashMap<String, HttpClient>();
-		instantiateDU = new HashMap<String, HttpClient>();
-		
-		// Discovery del servizio InstantiateDU
-		HttpEndpoint.getClient(
-				discovery,
-				new JsonObject().put("name", "instantiate-du-kubernetes"),
-				client -> {
-					if (client.failed()) {
-						future.fail("InstantiateDU-Kubernetes discovery failed: " + client.cause());
-					} else {
-						//instantiateDU = client.result();
-						instantiateDU.put("kubernetes", client.result());
-						System.out.println("InstantiateDU-Kubernetes discovery succeeded");
-					}
-				});
-
-		// Discovery del servizio InstantiateCluster
-		HttpEndpoint.getClient(
-				discovery,
-				new JsonObject().put("name", "instantiate-k8s-cluster-openstack"),
-				client -> {
-					if (client.failed()) {
-						future.fail("InstantiateCluster-Kubernetes discovery failed: " + client.cause());
-					} else {
-						//instantiateCluster = client.result();
-						instantiateCluster.put("kubernetes", client.result());
-						System.out.println("InstantiateCluster-Kubernetes discovery succeeded");
-					}
-				});
-		
-		// Discovery del servizio InstantiateCluster
-		HttpEndpoint.getClient(
-				discovery,
-				new JsonObject().put("name", "instantiate-swarm-cluster-openstack"),
-				client -> {
-					if (client.failed()) {
-						future.fail("InstantiateCluster-Swarm discovery failed: " + client.cause());
-					} else {
-						//instantiateCluster = client.result();
-						instantiateCluster.put("swarm", client.result());
-						System.out.println("InstantiateCluster-Swarm discovery succeeded");
-					}
-				});
-		
-		// Discovery del servizio InstantiateDU
-		HttpEndpoint.getClient(
-				discovery,
-				new JsonObject().put("name", "instantiate-du-swarm"),
-				client -> {
-					if (client.failed()) {
-						future.fail("InstantiateDU-Swarm discovery failed: " + client.cause());
-					} else {
-						//instantiateDU = client.result();
-						instantiateDU.put("swarm", client.result());
-						System.out.println("InstantiateDUSwarm-Swarm discovery succeeded");
-					}
-				});
-
+//		
+//		instantiateCluster = new HashMap<String, HttpClient>();
+//		instantiateDU = new HashMap<String, HttpClient>();
+//		
+//		// Discovery del servizio InstantiateDU
+//		HttpEndpoint.getClient(
+//				discovery,
+//				new JsonObject().put("name", "instantiate-du-kubernetes"),
+//				client -> {
+//					if (client.failed()) {
+//						future.fail("InstantiateDU-Kubernetes discovery failed: " + client.cause());
+//					} else {
+//						//instantiateDU = client.result();
+//						instantiateDU.put("kubernetes", client.result());
+//						System.out.println("InstantiateDU-Kubernetes discovery succeeded");
+//					}
+//				});
+//
+//		// Discovery del servizio InstantiateCluster
+//		HttpEndpoint.getClient(
+//				discovery,
+//				new JsonObject().put("name", "instantiate-k8s-cluster-openstack"),
+//				client -> {
+//					if (client.failed()) {
+//						future.fail("InstantiateCluster-Kubernetes discovery failed: " + client.cause());
+//					} else {
+//						//instantiateCluster = client.result();
+//						instantiateCluster.put("kubernetes", client.result());
+//						System.out.println("InstantiateCluster-Kubernetes discovery succeeded");
+//					}
+//				});
+//		
+//		// Discovery del servizio InstantiateCluster
+//		HttpEndpoint.getClient(
+//				discovery,
+//				new JsonObject().put("name", "instantiate-swarm-cluster-openstack"),
+//				client -> {
+//					if (client.failed()) {
+//						future.fail("InstantiateCluster-Swarm discovery failed: " + client.cause());
+//					} else {
+//						//instantiateCluster = client.result();
+//						instantiateCluster.put("swarm", client.result());
+//						System.out.println("InstantiateCluster-Swarm discovery succeeded");
+//					}
+//				});
+//		
+//		// Discovery del servizio InstantiateDU
+//		HttpEndpoint.getClient(
+//				discovery,
+//				new JsonObject().put("name", "instantiate-du-swarm"),
+//				client -> {
+//					if (client.failed()) {
+//						future.fail("InstantiateDU-Swarm discovery failed: " + client.cause());
+//					} else {
+//						//instantiateDU = client.result();
+//						instantiateDU.put("swarm", client.result());
+//						System.out.println("InstantiateDUSwarm-Swarm discovery succeeded");
+//					}
+//				});
+//
 //		// Discovery del servizio AddStorage
 //		HttpEndpoint.getClient(
 //				discovery,
@@ -296,6 +446,7 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 //		String businessKey = requestBody.getString("businessKey");
 		JsonObject properties = requestBody.getJsonObject("properties");
 		String platform = properties.getString("platform");
+		String provider = properties.getString("provider");
 		
 		if(name == null || category == null || properties == null)
 			// Se i parametri sono vuoti, allora viene restituita una Bad Request
@@ -313,8 +464,9 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 			.put("properties", properties);		
 		
 		switch(category) {
-		case "vm": 
-			instantiateVM.post("/vms", response -> {
+		case "vm":	
+//			instantiateVM.post("/vms", response -> {
+			instantiateVM.get(provider).post("/vms", response -> {			
 				response.exceptionHandler(future::fail); /* Eccezione sulla response da gestire */
 				
 				statusCode = response.statusCode();
@@ -332,7 +484,8 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 //			.end();
 			break;
 		case "storage":
-			addStorage.post("/volumes", response -> {
+//			addStorage.post("/volumes", response -> {
+			addStorage.get(provider).post("/volumes", response -> {
 				response.exceptionHandler(future::fail);
 				
 				statusCode = response.statusCode();
@@ -345,8 +498,8 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 			.end(body.encode());
 			break;
 		case "cluster":
-			//instantiateCluster.post("/clusters", response -> {
-			instantiateCluster.get(platform).post("/clusters", response -> {
+//			instantiateCluster.get(platform).post("/clusters", response -> {
+			instantiateCluster.get(provider + "-" + platform).post("/clusters", response -> {			
 				response.exceptionHandler(future::fail);
 
 				statusCode = response.statusCode();
@@ -380,12 +533,15 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 		String categoryParam = routingContext.request().getParam("category");
 		String[] categoryParamSplit = categoryParam.split(":");
 		String category = categoryParamSplit[0];
+		String provider = categoryParamSplit[1];
 		
 		String id = routingContext.request().getParam("id");
 		
 		switch(category) {
 		case "vm": 
-			instantiateVM.get("/vms/" + encode(id), response -> {                              
+			System.out.println("Invocazione di instantiateVM...");
+//			instantiateVM.get("/vms/" + encode(id), response -> {
+			instantiateVM.get(provider).get("/vms/" + encode(id), response -> { 			
 			    response.exceptionHandler(future::fail); /* Eccezione sulla response da gestire */
 			    
 			    statusCode = response.statusCode();
@@ -397,7 +553,8 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 		    .end();  			
 			break;
 		case "storage":
-			addStorage.get("/volumes/" + encode(id), response -> {
+//			addStorage.get("/volumes/" + encode(id), response -> {
+			addStorage.get(provider).get("/volumes/" + encode(id), response -> {			
 				response.exceptionHandler(future::fail);
 				
 				statusCode = response.statusCode();
@@ -409,9 +566,8 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 			.end();
 			break;
 		case "cluster":
-			String platform = categoryParamSplit[1];
-			//instantiateCluster.get("/clusters/" + encode(id), response -> {
-			instantiateCluster.get(platform).get("/clusters/" + encode(id), response -> {
+			String platform = categoryParamSplit[2];
+			instantiateCluster.get(provider + "-" + platform).get("/clusters/" + encode(id), response -> {
 				response.exceptionHandler(future::fail);
 
 				statusCode = response.statusCode();
@@ -427,6 +583,7 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 		}
 		
 		future.setHandler(ar -> {
+			
 			routingContext.response()
 				.setStatusCode(statusCode)
 				.putHeader("content-type", "application/json; charset=utf-8")
@@ -446,14 +603,14 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 		if(name == null || category == null || properties == null) {
 			// Se i parametri sono vuoti, allora viene restituita una Bad Request
 			routingContext.response().setStatusCode(400).end();
-		} else {			
+		} else {	
+			name = name.replaceAll(category, "");
+			
 			JsonObject body = new JsonObject()
 			.put("name", name)
-			.put("properties", properties);		
+			.put("properties", properties);
 			
-			switch(category) {
-			case "ws":
-				createWS.post("/ws/create", response -> {
+			create.get(category).get(name).post("/" + category + "/create", response -> {
 					response.exceptionHandler(future::fail);
 					
 					statusCode = response.statusCode();
@@ -464,60 +621,74 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 				.exceptionHandler(future::fail)
 				.putHeader("content-type", "application/json; charset=utf-8")
 				.end(body.encode());
-				break;
-			case "sc":
-				createSC.post("/sc/create", response -> {
-					response.exceptionHandler(future::fail);
-					
-					statusCode = response.statusCode();
-					response.bodyHandler(buffer -> {
-						future.complete(buffer.toString());
-					});
-				})
-				.exceptionHandler(future::fail)
-				.putHeader("content-type", "application/json; charset=utf-8")
-				.end(body.encode());
-				break;
-			case "dbms":
-				createDBMS.post("/dbms/create", response -> {
-					response.exceptionHandler(future::fail);
-					
-					statusCode = response.statusCode();
-					response.bodyHandler(buffer -> {
-						future.complete(buffer.toString());
-					});
-				})
-				.exceptionHandler(future::fail)
-				.putHeader("content-type", "application/json; charset=utf-8")
-				.end(body.encode());
-				break;
-			case "db":
-				createDB.post("/db/create", response -> {
-					response.exceptionHandler(future::fail);
-					
-					statusCode = response.statusCode();
-					response.bodyHandler(buffer -> {
-						future.complete(buffer.toString());
-					});
-				})
-				.exceptionHandler(future::fail)
-				.putHeader("content-type", "application/json; charset=utf-8")
-				.end(body.encode());
-				break;
-			case "wa":
-				createWA.post("/wa/create", response -> {
-					response.exceptionHandler(future::fail);
-					
-					statusCode = response.statusCode();
-					response.bodyHandler(buffer -> {
-						future.complete(buffer.toString());
-					});
-				})
-				.exceptionHandler(future::fail)
-				.putHeader("content-type", "application/json; charset=utf-8")
-				.end(body.encode());
-				break;
-			}
+				
+//			switch(category) {
+//			case "ws":
+//				createWS.post("/ws/create", response -> {
+//					response.exceptionHandler(future::fail);
+//					
+//					statusCode = response.statusCode();
+//					response.bodyHandler(buffer -> {
+//						future.complete(buffer.toString());
+//					});
+//				})
+//				.exceptionHandler(future::fail)
+//				.putHeader("content-type", "application/json; charset=utf-8")
+//				.end(body.encode());
+//				break;
+//			case "sc":
+//				createSC.post("/sc/create", response -> {
+//					response.exceptionHandler(future::fail);
+//					
+//					statusCode = response.statusCode();
+//					response.bodyHandler(buffer -> {
+//						future.complete(buffer.toString());
+//					});
+//				})
+//				.exceptionHandler(future::fail)
+//				.putHeader("content-type", "application/json; charset=utf-8")
+//				.end(body.encode());
+//				break;
+//			case "dbms":
+//				createDBMS.post("/dbms/create", response -> {
+//					response.exceptionHandler(future::fail);
+//					
+//					statusCode = response.statusCode();
+//					response.bodyHandler(buffer -> {
+//						future.complete(buffer.toString());
+//					});
+//				})
+//				.exceptionHandler(future::fail)
+//				.putHeader("content-type", "application/json; charset=utf-8")
+//				.end(body.encode());
+//				break;
+//			case "db":
+//				createDB.post("/db/create", response -> {
+//					response.exceptionHandler(future::fail);
+//					
+//					statusCode = response.statusCode();
+//					response.bodyHandler(buffer -> {
+//						future.complete(buffer.toString());
+//					});
+//				})
+//				.exceptionHandler(future::fail)
+//				.putHeader("content-type", "application/json; charset=utf-8")
+//				.end(body.encode());
+//				break;
+//			case "wa":
+//				createWA.post("/wa/create", response -> {
+//					response.exceptionHandler(future::fail);
+//					
+//					statusCode = response.statusCode();
+//					response.bodyHandler(buffer -> {
+//						future.complete(buffer.toString());
+//					});
+//				})
+//				.exceptionHandler(future::fail)
+//				.putHeader("content-type", "application/json; charset=utf-8")
+//				.end(body.encode());
+//				break;
+//			}
 			
 			future.setHandler(ar -> {
 				routingContext.response()
@@ -540,73 +711,87 @@ public class ServiceBrokerAPIVerticle extends MicroServiceVerticle {
 			// Se i parametri sono vuoti, allora viene restituita una Bad Request
 			routingContext.response().setStatusCode(400).end();
 		} else {
+			name = name.replaceAll(category, "");
+			
 			JsonObject body = new JsonObject()
 			.put("name", name)
 			.put("properties", properties);			
-			
-			switch(category) {
-			case "ws":
-				configureWS.post("/ws/configure", response -> {
-					response.exceptionHandler(future::fail);
-					
-					statusCode = response.statusCode();
-					response.bodyHandler(buffer -> {
-						future.complete(buffer.toString());
-					});
-				})
-				.exceptionHandler(future::fail)
-				.putHeader("content-type", "application/json; charset=utf-8")
-				.end(body.encode());
-				break;
-			case "sc":
-				statusCode = 200;
-				JsonObject result = new JsonObject();
+
+			configure.get(category).get(name).post("/" + category + "/configure", response -> {
+				response.exceptionHandler(future::fail);
 				
-				result.put("status", ConfigureSC.Status.OK.value());
-				result.put("message", "");
+				statusCode = response.statusCode();
+				response.bodyHandler(buffer -> {
+					future.complete(buffer.toString());
+				});
+			})
+			.exceptionHandler(future::fail)
+			.putHeader("content-type", "application/json; charset=utf-8")
+			.end(body.encode());			
 			
-				future.complete(result.encode());
-				break;
-			case "dbms": 
-				configureDBMS.post("/dbms/configure", response -> {
-					response.exceptionHandler(future::fail);
-					
-					statusCode = response.statusCode();
-					response.bodyHandler(buffer -> {
-						future.complete(buffer.toString());
-					});
-				})
-				.exceptionHandler(future::fail)
-				.putHeader("content-type", "application/json; charset=utf-8")
-				.end(body.encode());
-				break;
-			case "db": 
-				configureDB.post("/db/configure", response -> {
-					response.exceptionHandler(future::fail);
-					
-					statusCode = response.statusCode();
-					response.bodyHandler(buffer -> {
-						future.complete(buffer.toString());
-					});
-				})
-				.exceptionHandler(future::fail)
-				.putHeader("content-type", "application/json; charset=utf-8")
-				.end(body.encode());
-				break;
-			case "wa":
-				configureWA.post("/wa/configure", response -> {
-					response.exceptionHandler(future::fail);
-					
-					statusCode = response.statusCode();
-					response.bodyHandler(buffer -> {
-						future.complete(buffer.toString());
-					});
-				})
-				.exceptionHandler(future::fail)
-				.putHeader("content-type", "application/json; charset=utf-8")
-				.end(body.encode());
-				break;
-			}
+//			switch(category) {
+//			case "ws":
+//				configureWS.post("/ws/configure", response -> {
+//					response.exceptionHandler(future::fail);
+//					
+//					statusCode = response.statusCode();
+//					response.bodyHandler(buffer -> {
+//						future.complete(buffer.toString());
+//					});
+//				})
+//				.exceptionHandler(future::fail)
+//				.putHeader("content-type", "application/json; charset=utf-8")
+//				.end(body.encode());
+//				break;
+//			case "sc":
+//				statusCode = 200;
+//				JsonObject result = new JsonObject();
+//				
+//				result.put("status", ConfigureSC.Status.OK.value());
+//				result.put("message", "");
+//			
+//				future.complete(result.encode());
+//				break;
+//			case "dbms": 
+//				configureDBMS.post("/dbms/configure", response -> {
+//					response.exceptionHandler(future::fail);
+//					
+//					statusCode = response.statusCode();
+//					response.bodyHandler(buffer -> {
+//						future.complete(buffer.toString());
+//					});
+//				})
+//				.exceptionHandler(future::fail)
+//				.putHeader("content-type", "application/json; charset=utf-8")
+//				.end(body.encode());
+//				break;
+//			case "db": 
+//				configureDB.post("/db/configure", response -> {
+//					response.exceptionHandler(future::fail);
+//					
+//					statusCode = response.statusCode();
+//					response.bodyHandler(buffer -> {
+//						future.complete(buffer.toString());
+//					});
+//				})
+//				.exceptionHandler(future::fail)
+//				.putHeader("content-type", "application/json; charset=utf-8")
+//				.end(body.encode());
+//				break;
+//			case "wa":
+//				configureWA.post("/wa/configure", response -> {
+//					response.exceptionHandler(future::fail);
+//					
+//					statusCode = response.statusCode();
+//					response.bodyHandler(buffer -> {
+//						future.complete(buffer.toString());
+//					});
+//				})
+//				.exceptionHandler(future::fail)
+//				.putHeader("content-type", "application/json; charset=utf-8")
+//				.end(body.encode());
+//				break;
+//			}
 			
 			future.setHandler(ar -> {
 				routingContext.response()
