@@ -1,26 +1,21 @@
 package it.unict.vertx.esb.instantiatek8scluster;
 
+import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.SecureRandom;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
-import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
-import it.unict.vertx.esb.resource.InstantiateCluster;
 import org.openstack4j.api.OSClient.OSClientV3;
 import org.openstack4j.model.magnum.Carequest;
 import org.openstack4j.model.magnum.Cluster;
@@ -32,7 +27,6 @@ import org.openstack4j.model.compute.Flavor;
 import org.openstack4j.model.compute.Image;
 import org.openstack4j.model.compute.Server;
 import org.openstack4j.model.network.Network;
-
 
 import org.openstack4j.openstack.magnum.MagnumCarequest;
 import org.openstack4j.openstack.magnum.MagnumCluster;
@@ -62,8 +56,8 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
-import java.io.*;
 
+import it.unict.vertx.esb.resource.InstantiateCluster;
 
 public class InstantiateK8sClusterOpenstackAPIVerticle extends AbstractVerticle implements InstantiateCluster {
 		
@@ -254,9 +248,9 @@ public class InstantiateK8sClusterOpenstackAPIVerticle extends AbstractVerticle 
 
 				responseBody.put("endpoint", "https://" + masterAddress.getAddr() + ":6443");
 				// CERTIFICATES
-				responseBody.put("pem", certificates.get("pem"));
+				responseBody.put("ca", certificates.get("ca"));
 				responseBody.put("cert", certificates.get("cert"));
-				responseBody.put("rsa", certificates.get("rsa"));
+				responseBody.put("key", certificates.get("key"));
 				break;
 			} catch(Exception e)
 			{
@@ -314,7 +308,7 @@ public class InstantiateK8sClusterOpenstackAPIVerticle extends AbstractVerticle 
 			pemWriter.close();
 		}
 		// RSA
-		String rsa = sw.toString();
+		String key = sw.toString();
 
 		////// DO NOT TOUCH /////////////// [create the certificate - version 3 - without extensions]
 		AlgorithmIdentifier sigAlgId = new DefaultSignatureAlgorithmIdentifierFinder().find("SHA256WithRSAEncryption");
@@ -348,12 +342,13 @@ public class InstantiateK8sClusterOpenstackAPIVerticle extends AbstractVerticle 
 
 		Carequest car = MagnumCarequest.builder().bayUuid(clusterID).csr(certificateSigningRequest).build();
 		String cert = os.magnum().signCertificate(car).getPem();
-		String pem =  os.magnum().getCertificate(clusterID).getPem();
+		String ca =  os.magnum().getCertificate(clusterID).getPem();
 
 		Map<String, String> certificates = new HashMap<String, String>();
+		certificates.put("ca", ca);
 		certificates.put("cert", cert);
-		certificates.put("pem", pem);
-		certificates.put("rsa", rsa);
+		certificates.put("key", key);
+		
 		return certificates;
 	}
 

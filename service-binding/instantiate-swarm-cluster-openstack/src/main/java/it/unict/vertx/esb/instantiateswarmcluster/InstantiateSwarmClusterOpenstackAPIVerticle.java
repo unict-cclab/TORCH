@@ -227,9 +227,9 @@ public class InstantiateSwarmClusterOpenstackAPIVerticle extends AbstractVerticl
 					Map<String, String> certificates = generateCertificates(os, id);
 
 					// CERTIFICATES
-					responseBody.put("pem", certificates.get("pem"));
+					responseBody.put("ca", certificates.get("ca"));
 					responseBody.put("cert", certificates.get("cert"));
-					responseBody.put("rsa", certificates.get("rsa"));
+					responseBody.put("key", certificates.get("key"));
 				} catch(Exception e)
 				{
 					mappedStatus = InstantiateCluster.Status.ERROR;
@@ -287,7 +287,7 @@ public class InstantiateSwarmClusterOpenstackAPIVerticle extends AbstractVerticl
 			pemWriter.close();
 		}
 		// RSA
-		String rsa = sw.toString();
+		String key = sw.toString();
 
 		////// DO NOT TOUCH /////////////// [create the certificate - version 3 - without extensions]
 		AlgorithmIdentifier sigAlgId = new DefaultSignatureAlgorithmIdentifierFinder().find("SHA256WithRSAEncryption");
@@ -321,12 +321,13 @@ public class InstantiateSwarmClusterOpenstackAPIVerticle extends AbstractVerticl
 
 		Carequest car = MagnumCarequest.builder().bayUuid(clusterID).csr(certificateSigningRequest).build();
 		String cert = os.magnum().signCertificate(car).getPem();
-		String pem =  os.magnum().getCertificate(clusterID).getPem();
+		String ca =  os.magnum().getCertificate(clusterID).getPem();
 
 		Map<String, String> certificates = new HashMap<String, String>();
+		certificates.put("ca", ca);
 		certificates.put("cert", cert);
-		certificates.put("pem", pem);
-		certificates.put("rsa", rsa);
+		certificates.put("key", key);
+		
 		return certificates;
 	}
 
