@@ -1,7 +1,15 @@
 package it.unict.vertx.esb.createws;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -17,14 +25,16 @@ import it.unict.vertx.esb.packet.create.CreateWS;
 
 public class CreateWSApacheAPIVerticle extends AbstractVerticle implements CreateWS {
 	
-	private String keyName, scriptName;
+	private String keyName, keyPath, scriptName;
 
 	@Override
 	  public void start(Future<Void> future) throws Exception {
 		super.start();
 		
 		// Inizializzazione
-		keyName = System.getProperty("user.dir") + config().getString("key.name");
+//		keyName = System.getProperty("user.dir") + config().getString("key.name");
+		keyName = config().getString("key.name");
+		keyPath = System.getProperty("user.dir");
 		scriptName = System.getProperty("user.dir") + config().getString("script.name");
 				
 		Router router = Router.router(vertx);
@@ -59,8 +69,13 @@ public class CreateWSApacheAPIVerticle extends AbstractVerticle implements Creat
 				.filter(s -> s.matches("^appserver\\d?\\.address"))
 				.collect(Collectors.toSet());
 		
+		Set<String> key = properties.keySet().stream()
+				.filter(s -> s.matches("^appserver\\d?\\.key"))
+				.collect(Collectors.toSet());		
+		
 		String appUsername = (String) properties.get(usr.toArray()[0]);
 		String appAddress = (String) properties.get(addr.toArray()[0]);
+		String appKey = (String) properties.get(key.toArray()[0]);
 		
 //		String appUsername = (String) properties.get("appserver.username");
 //		String appAddress = (String) properties.get("appserver.address");
@@ -77,12 +92,39 @@ public class CreateWSApacheAPIVerticle extends AbstractVerticle implements Creat
 					e.printStackTrace();
 				}
 			}
-	
+			
+			File keyFile = null;
+			BufferedWriter keyBufferedWriter = null;
+			
+			 try {
+				keyFile = File.createTempFile(keyName, ".pem", new File(keyPath));
+//				keyFile.setReadable(true, true);
+//				keyFile.setWritable(true, true);
+				
+				Set<PosixFilePermission> perms = new HashSet<>();
+				perms.add(PosixFilePermission.OWNER_READ);
+				perms.add(PosixFilePermission.OWNER_WRITE);	
+				
+				Files.setPosixFilePermissions(keyFile.toPath(), perms);					
+				
+				keyBufferedWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(keyFile), StandardCharsets.UTF_8));
+				keyBufferedWriter.write(appKey);
+				keyBufferedWriter.close();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}				
+			
 			command = "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -i " 
-					+ keyName + " " + appUsername + "@" + appAddress
-					+ " 'bash -s' < " + scriptName + " | tail -n 1";
+					+ keyFile.getAbsolutePath() + " " + appUsername + "@" + appAddress
+					+ " 'bash -s' < " + scriptName + " | tail -n 1";		
+	
+//			command = "ssh -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -i " 
+//					+ keyName + " " + appUsername + "@" + appAddress
+//					+ " 'bash -s' < " + scriptName + " | tail -n 1";
 						
 			String result = executeCommand(command);
+			keyFile.delete();
 			future.complete(result);
 		}, res -> {
 			if (res.succeeded()) {
