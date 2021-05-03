@@ -25,6 +25,7 @@ import org.openstack4j.model.compute.Addresses;
 import org.openstack4j.model.compute.Fault;
 import org.openstack4j.model.compute.Flavor;
 import org.openstack4j.model.compute.Image;
+import org.openstack4j.model.compute.Keypair;
 import org.openstack4j.model.compute.Server;
 import org.openstack4j.model.compute.Server.Status;
 import org.openstack4j.model.compute.ServerCreate;
@@ -36,7 +37,7 @@ public class InstantiateVMOpenstackAPIVerticle extends AbstractVerticle implemen
 		
 	private String computeUri, identityUri, imageUri, networkUri;
 	private String domainId, username, password;
-	private String flavorName, imageName, securityGroup, keyName, networkName, adminPassword;
+	private String flavorName, imageName, securityGroup, keyName, networkName, adminUsername, adminPassword;
 	
 	@Override
 	  public void start(Future<Void> future) throws Exception {
@@ -56,6 +57,7 @@ public class InstantiateVMOpenstackAPIVerticle extends AbstractVerticle implemen
 		securityGroup = config().getString("security.group");
 		keyName = config().getString("key.name");
 		networkName = config().getString("network.name");
+		adminUsername = config().getString("admin.username");
 		adminPassword = config().getString("admin.password");
 		
 		Router router = Router.router(vertx);
@@ -105,6 +107,9 @@ public class InstantiateVMOpenstackAPIVerticle extends AbstractVerticle implemen
 				.collect(Collectors.toList());
 		List<String> networks = Arrays.asList(nets.get(0).getId());
 		
+		Keypair keyPair = os.compute().keypairs().create(name + "-" + keyName, null);
+		String key = keyPair.getPrivateKey();
+		
 		/* Creazione dell'istanza:
 		 * 
 		 * - name			
@@ -121,7 +126,7 @@ public class InstantiateVMOpenstackAPIVerticle extends AbstractVerticle implemen
 				.image(images.get(0))
 				.networks(networks)
 				.addSecurityGroup(securityGroup)
-				.keypairName(keyName)
+				.keypairName(keyPair.getName())
 				.addAdminPass(adminPassword)
 				.build();
 		
@@ -140,9 +145,12 @@ public class InstantiateVMOpenstackAPIVerticle extends AbstractVerticle implemen
 			
 			responseBody.put("message", fault.getMessage());
 			responseBody.put("details", fault.getDetails());
-			responseCode = fault.getCode();
+//			responseCode = fault.getCode();
+			responseCode = 500;
 		} else {
 			responseBody.put("id", id);
+			responseBody.put("username", adminUsername);
+			responseBody.put("key", key);
 		}
 		
 		routingContext.response()
@@ -176,6 +184,11 @@ public class InstantiateVMOpenstackAPIVerticle extends AbstractVerticle implemen
 		case ACTIVE:
 			mappedStatus = InstantiateVM.Status.OK;
 			responseBody.put("status", mappedStatus.value());
+//			responseBody.put("username", adminUsername);
+			
+//			Keypair keyPair = os.compute().keypairs().get(keyName);
+//			if(keyPair != null)
+//				responseBody.put("key", keyPair.getPrivateKey());
 			
 			Addresses serverAddresses = server.getAddresses();
 		    Map<String, List<? extends Address>> networkAddresses = serverAddresses.getAddresses();
@@ -208,7 +221,8 @@ public class InstantiateVMOpenstackAPIVerticle extends AbstractVerticle implemen
 			responseBody.put("status", mappedStatus.value());
 			responseBody.put("message", fault.getMessage());
 			responseBody.put("details", fault.getDetails());
-			responseCode = fault.getCode();
+//			responseCode = fault.getCode();
+			responseCode = 500;
 			break;
 		}
 		
