@@ -1,0 +1,9 @@
+{
+  "host": "localhost",
+  "http.port": 9002,
+  "storage.uri": "http://controller:8776/v3/",
+  "identity.uri": "http://controller:5000/v3/",
+  "domain.id": "default",
+  "username": "tosca",
+  "password": "tosca_user_pass"
+}

@@ -1,0 +1,6 @@
+{
+  "host": "localhost",
+  "http.port": 9010,
+  "key.name": "appserver-toscaKey",
+  "script.name": "/resources/wordpress-create.sh"
+}

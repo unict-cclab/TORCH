@@ -1,0 +1,9 @@
+# sample management library properties file
+subscription=**************************************
+client=********************************************
+key=***********************************************
+tenant=********************************************
+managementURI=https\://management.core.windows.net/
+baseURL=https\://management.azure.com/
+authURL=https\://login.windows.net/
+graphURL=https\://graph.windows.net/

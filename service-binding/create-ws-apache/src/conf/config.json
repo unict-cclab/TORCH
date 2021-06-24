@@ -1,0 +1,6 @@
+{
+  "host": "localhost",
+  "http.port": 9007,
+  "key.name": "appserver-toscaKey",
+  "script.name": "/resources/apache-create.sh"
+}

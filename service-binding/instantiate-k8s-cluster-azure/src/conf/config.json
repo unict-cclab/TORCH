@@ -1,0 +1,12 @@
+{
+  "host": "localhost",
+  "http.port": 9018,
+  "credentials.file": "/resources/properties",
+  "region": "eastus",
+  "resource.group": "sampleVmResourceGroup",
+  "username": "rootAks",
+  "key.name": "rootAksKey",
+  "agent.pool": "agentpool",
+  "service.principal.client.id":"********************",
+  "service.principal.secret":"***********************"
+}

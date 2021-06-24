@@ -1,0 +1,64 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+# Repositories to retrieve code artifacts from
+repositories:
+  docker_hub: https://registry.hub.docker.com/
+
+node_types:
+  tosca.nodes.Container.Database.MySQL:
+    description: >
+      MySQL container from the Docker Hub repository
+    derived_from: tosca.nodes.Container.Database
+    requirements:
+      - volume:
+          capability: tosca.capabilities.Attachment
+          relationship: tosca.relationships.AttachesTo
+          occurrences: [0, 1]
+
+  tosca.nodes.Container.WebApplication.Wordpress:
+    description: >
+      Wordpress container from the Docker Hub repository
+    derived_from: tosca.nodes.Container.WebApplication
+    requirements:
+      - wordpress_db_host:
+          capability: tosca.capabilities.Endpoint.Database
+          relationship: tosca.relationships.ConnectsTo
+      - volume:
+          capability: tosca.capabilities.Attachment
+          relationship: tosca.relationships.AttachesTo
+          occurrences: [0, 1]
+          
+  tosca.nodes.Container.WebApplication.UserApp:
+    description: >
+      Wordpress container from the Docker Hub repository
+    derived_from: tosca.nodes.Container.WebApplication
+    requirements:
+      - MONGO_HOST:
+          capability: tosca.capabilities.Endpoint.Database
+          relationship: tosca.relationships.ConnectsTo
+          
+  tosca.nodes.Container.Database.MongoDB:
+    description: >
+      MongoDB container from the Docker Hub repository
+    derived_from: tosca.nodes.Container.Database
+    requirements:
+      - volume:
+          capability: tosca.capabilities.Attachment
+          relationship: tosca.relationships.AttachesTo
+          occurrences: [0, 1] 
+  
+  tosca.nodes.Container.Application.RabbitMQ:
+    derived_from: tosca.nodes.Container.Application
+    description: >
+      TOSCA Container for RabbitMQ
+    capabilities:
+      queue_endpoint:
+        type: tosca.capabilities.Endpoint 
+
+  tosca.nodes.Container.WebApplication.AppWithVolume:
+    derived_from: tosca.nodes.Container.WebApplication
+    requirements:
+      - volume:
+          capability: tosca.capabilities.Attachment
+          relationship: tosca.relationships.AttachesTo
+          occurrences: [0, 1]  

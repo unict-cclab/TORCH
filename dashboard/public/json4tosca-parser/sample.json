@@ -1,0 +1,112 @@
+[
+	{
+		"name": "wordpress",
+		"type": "package",
+		"category": "wa",
+		"requirements": {
+			"create": ["apache.start"],
+			"configure": ["php.start", "mysql_database.start"],
+			"start": []
+		},
+		"properties": {
+			"zip.url": "https://wordpress.org/latest.zip",
+			"context.root": "/"
+		}
+	},
+	{
+		"name": "mysql_database",
+		"type": "package",
+		"category": "db",
+		"requirements": {
+			"create": ["mysql_dbms.start"],
+			"configure": ["app_server.create"],
+			"start": []
+		},
+		"properties": {
+			"db.name": "wordpress",
+			"db.usr": "wp.usr",
+			"db.pwd": "wp.pwd"
+		}
+	},
+	{
+		"name": "mysql_dbms",
+		"type": "package",
+		"category": "dbms",
+		"requirements": {
+			"create": ["mysql_server.create"],
+			"configure": [],
+			"start": []
+		},
+		"properties": {
+			"db.root.pwd": "root",
+			"db.port": 3306
+		}
+	},
+	{
+		"name": "php",
+		"type": "package",
+		"category": "sc",
+		"requirements": {
+			"create": ["app_server.create"],
+			"configure": [],
+			"start": []
+		},
+		"properties": {
+			"not.a.property": "not.a.property"
+		}
+	},
+	{
+		"name": "apache",
+		"type": "package",
+		"category": "ws",
+		"requirements": {
+			"create": ["app_server.create"],
+			"configure": [],
+			"start": []
+		},
+		"properties": {
+			"port": 80,
+			"doc.root": "/var/www"
+		}
+	},
+	{
+		"name": "app_server",
+		"type": "resource",
+		"category": "vm",
+		"requirements": {
+			"create": [],
+			"configure": [],
+			"start": []
+		},
+		"properties": {
+			"host.disk.size": "10GB",
+			"host.cpus": 1,
+			"host.mem.size": "4096MB",
+			"host.cpu.frequency": "1GHz",
+			"os.architecture": "x86_64",
+			"os.type": "Linux",
+			"os.distribution": "Ubuntu",
+			"os.version": 14.04
+		}
+	},
+	{
+		"name": "mysql_server",
+		"type": "resource",
+		"category": "vm",
+		"requirements": {
+			"create": [],
+			"configure": [],
+			"start": []
+		},
+		"properties": {
+			"host.disk.size": "10GB",
+			"host.cpus": 1,
+			"host.mem.size": "4096MB",
+			"host.cpu.frequency": "1GHz",
+			"os.architecture": "x86_64",
+			"os.type": "Linux",
+			"os.distribution": "Ubuntu",
+			"os.version": 14.04
+		}
+	}
+]

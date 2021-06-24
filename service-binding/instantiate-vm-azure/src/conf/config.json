@@ -1,0 +1,14 @@
+{
+  "host": "localhost",
+  "http.port": 9016,
+  "credentials.file": "/resources/properties",
+  "region": "eastus",
+  "resource.group": "sampleVmResourceGroup",
+  "network.id": "*************************",
+  "subnet": "default",
+  "image": "UBUNTU_SERVER_16_04_LTS",
+  "username": "azureusername",
+  "password": "*************",
+  "key.name": "toscaKey",
+  "size": "STANDARD_D1_V2"
+}

@@ -1,0 +1,398 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+# NODEPORT? Impostare?
+# ANNOTATIONS? queue-master
+# queue-master was missing in Swarm description
+# Note that there are different parameters for K8s and DockerSwarm. ZIPKIN is disabled on Swarm  
+# TODO: controllare MONGO_HOST
+# Aggiungere user-sim?
+# du_port:container_port 
+
+description: >
+  The application is the user-facing part of an online shop that sells socks. 
+  It is intended to aid the demonstration and testing of microservice and cloud native technologies.
+  It is built using Spring Boot, Go kit and Node.js and is packaged in Docker containers.
+
+imports:
+  - custom_types/tosca_container_types.yaml
+  - custom_types/tosca_container_sockshop.yaml
+
+topology_template:
+  inputs:
+    allow_empty_password:
+      type: boolean
+      default: true
+    mysql_root_password:
+      type: string
+      default: fake_password
+    mysql_db:
+      type: string
+      default: socksdb
+    web_port:
+      type: integer
+      default: 80
+    mysql_port:
+      type: integer
+      default:  3306
+    mongodb_port:
+      type: integer
+      default: 27017
+    rabbitmq_port:
+      type: integer
+      default: 5672
+    front_end_container_port:
+      type: integer
+      default: 8079
+    zipkin_local:
+      type: string
+      default: zipkin.jaeger.svc.cluster.local
+    java_opts:
+      type: string
+      default: -Xms64m -Xmx128m -XX:PermSize=32m -XX:MaxPermSize=64m -XX:+UseG1GC -Djava.security.egd=file:/dev/urandom
+    tmp_location:
+      type: string
+      description: Location for tmp-volume
+      default: /tmp
+      
+  relationship_templates:
+    tosca.relationships.AttachesToTmpVolume:
+      type: tosca.relationships.AttachesTo
+      properties:
+        location: { get_input: tmp_location }
+
+  node_templates:
+    front-end:
+      type: tosca.nodes.Container.WebApplication
+      requirements:
+        - host: front-end-du
+      capabilities:
+        app_endpoint:
+          properties:
+            port: { get_input: web_port } 
+      artifacts:
+        front-end-image:
+          file: weaveworksdemos/front-end:0.3.12
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      interfaces:
+        Standard:
+          create:
+            implementation: front-end-image
+            inputs:
+              port: { get_input: front_end_container_port }
+              
+    front-end-du:
+      type: tosca.nodes.Container.Runtime
+      
+    catalogue:
+      type: tosca.nodes.Container.WebApplication
+      requirements:
+        - host: catalogue-du
+      artifacts:
+        catalogue-image:
+          file: weaveworksdemos/catalogue:0.3.5
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        app_endpoint:
+          properties:
+            port: { get_input: web_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: catalogue-image
+            inputs:
+              port: { get_input: web_port }
+
+    catalogue-du:
+      type: tosca.nodes.Container.Runtime    
+
+    catalogue-db:
+      type: tosca.nodes.Container.Database.MySQL
+      requirements:
+        - host: catalogue-db-du
+      artifacts:
+        catalogue-db-image:
+          file: weaveworksdemos/catalogue-db:0.3.0
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        database_endpoint:
+          properties:
+            port: { get_input: mysql_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: catalogue-db-image
+            inputs:
+              port: { get_input: mysql_port }
+              MYSQL_ROOT_PASSWORD: { get_input: mysql_root_password }
+              MYSQL_ALLOW_EMPTY_PASSWORD: { get_input: allow_empty_password }
+              MYSQL_DATABASE: { get_input: mysql_db }
+
+    catalogue-db-du:
+      type: tosca.nodes.Container.Runtime    
+    
+    carts:
+      type: tosca.nodes.Container.WebApplication.AppWithVolume
+      requirements:
+        - host: carts-du
+        - volume:
+            node: temp-volume
+            relationship: tosca.relationships.AttachesToTmpVolume
+      artifacts:
+        carts-image:
+          file: weaveworksdemos/carts:0.4.8
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        app_endpoint:
+          properties:
+            port: { get_input: web_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: carts-image
+            inputs:
+              port: { get_input: web_port } 
+              ZIPKIN: { get_input: zipkin_local } 
+              JAVA_OPTS: { get_input: java_opts }        
+
+    carts-du:
+      type: tosca.nodes.Container.Runtime
+    
+    carts-db:
+      type: tosca.nodes.Container.Database.MongoDB
+      requirements:
+        - host: carts-db-du
+        - volume:
+            node: temp-volume
+            relationship: tosca.relationships.AttachesToTmpVolume
+      artifacts:
+        carts-db-image:
+          file: mongo:3.4
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        database_endpoint:
+          properties:
+            port: { get_input: mongodb_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: carts-db-image
+            inputs:
+              port: { get_input: mongodb_port }
+
+    carts-db-du:
+      type: tosca.nodes.Container.Runtime  
+      
+    orders:
+      type: tosca.nodes.Container.WebApplication.AppWithVolume
+      requirements:
+        - host: orders-du
+        - volume:
+            node: temp-volume
+            relationship: tosca.relationships.AttachesToTmpVolume
+      artifacts:
+        orders-image:
+          file: weaveworksdemos/orders:0.4.7
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        app_endpoint:
+          properties:
+            port: { get_input: web_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: orders-image
+            inputs:
+              port: { get_input: web_port } 
+              ZIPKIN: { get_input: zipkin_local } 
+              JAVA_OPTS: { get_input: java_opts }
+    
+
+    orders-du:
+      type: tosca.nodes.Container.Runtime  
+
+    orders-db:
+      type: tosca.nodes.Container.Database.MongoDB
+      requirements:
+        - host: orders-db-du
+        - volume:
+            node: temp-volume
+            relationship: tosca.relationships.AttachesToTmpVolume
+      artifacts:
+        orders-db-image:
+          file: mongo:3.4
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        database_endpoint:
+          properties:  
+            port: { get_input: mongodb_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: orders-db-image
+            inputs:
+              port: { get_input: mongodb_port }
+
+    orders-db-du:
+      type: tosca.nodes.Container.Runtime  
+      
+    shipping:
+      type: tosca.nodes.Container.WebApplication.AppWithVolume
+      requirements:
+        - host: shipping-du
+        - volume:
+            node: temp-volume
+            relationship: tosca.relationships.AttachesToTmpVolume
+      artifacts:
+        shipping-image:
+          file: weaveworksdemos/shipping:0.4.8
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        app_endpoint:
+          properties:
+            port: { get_input: web_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: shipping-image
+            inputs:
+              port: { get_input: web_port }
+              ZIPKIN: { get_input: zipkin_local } 
+              JAVA_OPTS: { get_input: java_opts }
+    
+
+    shipping-du:
+      type: tosca.nodes.Container.Runtime  
+      
+    
+    queue-master:
+      type: tosca.nodes.Container.WebApplication
+      requirements:
+        - host: queue-master-du
+      artifacts:
+        queue-master-image:
+          file: weaveworksdemos/queue-master:0.3.1
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        app_endpoint:
+          properties:   
+            port: { get_input: web_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: queue-master-image
+            inputs:
+              port: { get_input: web_port }
+              
+    queue-master-du:
+      type: tosca.nodes.Container.Runtime  
+    
+    rabbitmq:
+      type: tosca.nodes.Container.Application.RabbitMQ
+      requirements:
+        - host: rabbitmq-du
+      artifacts:
+        rabbitmq-image:
+          file: rabbitmq:3.6.8
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        queue_endpoint:
+          properties:  
+            port: { get_input: rabbitmq_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: rabbitmq-image
+            inputs:
+              port: { get_input: rabbitmq_port } 
+              
+    rabbitmq-du:
+      type: tosca.nodes.Container.Runtime  
+
+    payment:
+      type: tosca.nodes.Container.WebApplication
+      requirements:
+        - host: payment-du
+      artifacts:
+        payment-image:
+          file: weaveworksdemos/payment:0.4.3
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        app_endpoint:
+          properties:
+            port: { get_input: web_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: payment-image
+            inputs:
+              port: { get_input: web_port }
+              
+    payment-du:
+      type: tosca.nodes.Container.Runtime  
+      
+    user:
+      type: tosca.nodes.Container.WebApplication.UserApp
+      requirements:
+        - host: user-du
+        - MONGO_HOST: user-db
+      artifacts:
+        user-image:
+          file: weaveworksdemos/user:0.4.7
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        app_endpoint:
+          properties:  
+            port: { get_input: web_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: user-image
+            inputs:
+              port: { get_input: web_port }
+              MONGO_HOST: user-db:27017
+              
+    user-du:
+      type: tosca.nodes.Container.Runtime
+      
+    user-db:
+      type: tosca.nodes.Container.Database.MongoDB
+      requirements:
+        - host: user-db-du
+        - volume:
+            node: temp-volume
+            relationship: tosca.relationships.AttachesToTmpVolume
+      artifacts:
+        user-db-image:
+          file: weaveworksdemos/user-db:0.4.0
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      capabilities:
+        database_endpoint:
+          properties:
+            port: { get_input: mongodb_port } 
+      interfaces:
+        Standard:
+          create:
+            implementation: user-db-image
+            inputs:
+              port: { get_input: mongodb_port }
+
+    user-db-du:
+      type: tosca.nodes.Container.Runtime  
+      
+    temp-volume:
+      type: tosca.nodes.BlockStorage
+      properties:
+        size: 10 GB

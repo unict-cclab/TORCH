@@ -1,0 +1,6 @@
+{
+  "host": "localhost",
+  "http.port": 9003,
+  "key.name": "dbserver-toscaKey",
+  "script.name": "/resources/mysql-create.sh"
+}

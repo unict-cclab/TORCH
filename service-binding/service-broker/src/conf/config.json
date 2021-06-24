@@ -1,0 +1,5 @@
+{
+  "host": "localhost",
+  "http.port": 9000,
+  "discovery.file": "/resources/services.json"
+}

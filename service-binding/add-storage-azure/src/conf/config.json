@@ -1,0 +1,7 @@
+{
+  "host": "localhost",
+  "http.port": 9017,
+  "credentials.file": "/resources/properties",
+  "region": "eastus",
+  "resource.group": "sampleVmResourceGroup"
+}

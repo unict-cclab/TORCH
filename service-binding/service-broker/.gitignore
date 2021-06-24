@@ -1,0 +1,10 @@
+/target
+/target/**/*
+
+/resources
+
+/.settings
+/.vertx
+
+/.classpath
+/.project

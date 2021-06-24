@@ -1,0 +1,115 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+description: >
+  TOSCA simple profile with Wordpress and MySQL on separate deployment units.
+
+imports:
+  - custom_types/tosca_container_types.yaml
+  - custom_types/tosca_container_wordpress_non_normative.yaml
+
+topology_template:
+  inputs:
+    mysql_root_pwd:
+      type: string
+      description: Root password for MySQL.
+      default: root
+    mysql_volume_size:
+      type: scalar-unit.size
+      description: Memory size for the mysql server.
+      default: 10 GB
+    mysql_port:
+      type: integer
+      description: MySQL container port
+      default: 3306
+    mysql_location:
+      type: string
+      description: Location for mysql mount.
+      default: /var/lib/mysql
+    wp_db_host:
+      type: string
+      description: Node of the db host
+      default: mysql_container
+    wp_host_port:
+      type: integer
+      description: The host port that maps to port 80 of the WordPress container.
+      default: 80
+    wp_volume_size:
+      type: scalar-unit.size
+      description: Memory size for the wordpress server.
+      default: 2 GB
+    wp_location:
+      type: string
+      description: Location for wordpress mount.
+      default: /var/www/html
+
+  relationship_templates:
+    tosca.relationships.MySQLAttachesToVolume:
+      type: tosca.relationships.AttachesTo
+      properties:
+        location: { get_input: mysql_location }
+
+    tosca.relationships.WordpressAttachesToVolume:
+      type: tosca.relationships.AttachesTo
+      properties:
+        location: { get_input: wp_location }
+      
+  node_templates:
+    mysql_container:
+      type: tosca.nodes.Container.Database.MySQL
+      requirements:
+        - host: mysql_deployment_unit
+        - volume:
+            node: mysql_volume
+            relationship: tosca.relationships.MySQLAttachesToVolume
+      artifacts:
+        mysql_image:
+          file: mysql:5.7
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      properties:
+        port: { get_input: mysql_port }
+        password: { get_input: mysql_root_pwd }
+      interfaces:
+        Standard:
+          create:
+            implementation: mysql_image
+            inputs:
+              port: { get_property: [ SELF, port ] }
+              mysql_root_password: { get_property: [ SELF, password ] }
+
+    mysql_volume:
+      type: tosca.nodes.BlockStorage
+      properties:
+        size: { get_input: mysql_volume_size}
+
+    mysql_deployment_unit:
+      type: tosca.nodes.Container.Runtime
+    
+    wordpress_container:
+      type: tosca.nodes.Container.WebApplication.Wordpress
+      requirements:
+        - host: wordpress_deployment_unit
+        - wordpress_db_host: mysql_container
+        - volume:
+            node: wordpress_volume
+            relationship: tosca.relationships.WordpressAttachesToVolume
+      artifacts:
+        wp_image:
+          file: wordpress
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      interfaces:
+        Standard:
+          create:
+            implementation: wp_image
+            inputs:
+              port: { get_input: wp_host_port }
+              wordpress_db_password: { get_property: [mysql_container, password] }
+
+    wordpress_volume:
+      type: tosca.nodes.BlockStorage
+      properties:
+        size: { get_input: wp_volume_size}
+
+    wordpress_deployment_unit:
+      type: tosca.nodes.Container.Runtime

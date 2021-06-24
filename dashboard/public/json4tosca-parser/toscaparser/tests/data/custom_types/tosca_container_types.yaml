@@ -1,0 +1,46 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+node_types:
+  tosca.nodes.Container.Database:
+    derived_from: tosca.nodes.Container.Application
+    description: >
+      TOSCA Container for Databases which employs the same capabilities and properties of the
+      tosca.nodes.Database but which extends from the Container.Application node_type
+    properties:
+      user:
+        required: false
+        type: string
+        description: >
+          User account name for DB administration
+      port:
+        required: false
+        type: integer
+        description:  >
+          The port the database service will use to listen for incoming data and
+          requests.
+      name:
+        required: false
+        type: string
+        description: >
+          The name of the database.
+      password:
+        required: false
+        type: string
+        description: >
+          The password for the DB user account
+    capabilities:
+      database_endpoint:
+        type: tosca.capabilities.Endpoint.Database  
+
+  tosca.nodes.Container.WebApplication:
+    derived_from: tosca.nodes.Container.Application
+    description: >
+      TOSCA Container for WebApplication which employs the same capabilities and properties of the
+      tosca.nodes.WebApplication but which extends from the Container.Application node_type
+    properties:
+      context_root:
+        type: string
+        required: false
+    capabilities:
+      app_endpoint:
+        type: tosca.capabilities.Endpoint         

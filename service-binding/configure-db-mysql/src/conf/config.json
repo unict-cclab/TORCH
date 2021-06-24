@@ -1,0 +1,6 @@
+{
+  "host": "localhost",
+  "http.port": 9006,
+  "key.name": "dbserver-toscaKey",
+  "script.name": "/resources/mysql-db-configure.sh"
+}
