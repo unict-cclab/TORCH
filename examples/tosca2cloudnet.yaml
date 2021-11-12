@@ -1,0 +1,143 @@
+######################################################################
+#
+# Software Name : Cloudnet TOSCA toolbox
+# Version: 1.0
+# SPDX-FileCopyrightText: Copyright (c) 2021 Orange
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is distributed under the Apache License 2.0
+# the text of which is available at http://www.apache.org/licenses/LICENSE-2.0
+# or see the "LICENSE-2.0.txt" file for more details.
+#
+# Author: Philippe Merle <philippe.merle@inria.fr>
+# Software description: Configuration of the TOSCA toolchain
+######################################################################
+
+# Configuration of the Alloy generator.
+Alloy:
+  # Target directory where Alloy files are generated.
+  target-directory: Cloudnet_TOSCA_Toolbox_Results/Alloy
+
+# Configuration of the declarative workflow generator.
+DeclarativeWorkflows:
+  # Target directory where declarative workflows are generated.
+  target-directory: Cloudnet_TOSCA_Toolbox_Results/DeclarativeWorkflows
+
+# Configuration of the network diagram generator.
+nwdiag:
+  # Target directory where network diagrams are generated.
+  target-directory: Cloudnet_TOSCA_Toolbox_Results/NetworkDiagrams
+
+# Configuration of the TOSCA diagram generator.
+tosca_diagrams:
+  # Target directory where network diagrams are generated.
+  target-directory: Cloudnet_TOSCA_Toolbox_Results/ToscaDiagrams
+
+# Configuration of the UML2 diagram generator.
+UML2:
+  # Target directory where UML2 diagrams are generated.
+  target-directory: Cloudnet_TOSCA_Toolbox_Results/Uml2Diagrams
+
+  graphical_anchors:
+    - &IaaS_color
+        color: LightGreen
+    - &PaaS_color
+      color: LightYellow
+    - &SaaS_color
+      color: LightBlue
+
+  # Representation of artifacts.
+  artifact_types:
+    tosca.artifacts.Deployment.Image.Container.Docker:
+      icon: icons/Docker.png
+
+  # Representation of node templates.
+  node_types:
+    tosca.nodes.Compute:
+      color: White
+    tosca.nodes.BlockStorage:
+      <<: *IaaS_color
+      icon: icons/BlockStorage.png
+    tosca.nodes.DBMS:
+      <<: *PaaS_color
+    tosca.nodes.Container.Runtime:
+      <<: *IaaS_color
+      icon: icons/Container-Runtime.png
+    tosca.nodes.Container.Database:
+      <<: *PaaS_color
+    tosca.nodes.Container.Database.MySQL:
+      <<: *PaaS_color
+      icon: icons/MySQL.png
+    tosca.nodes.Container.Database.MongoDB:
+      <<: *PaaS_color
+      icon: icons/MongoDB.png
+    tosca.nodes.Database.WordpressDB:
+      <<: *SaaS_color
+      icon: icons/Wordpress.png
+    tosca.nodes.Container.Application:
+      <<: *SaaS_color
+    tosca.nodes.Container.Application.RabbitMQ:
+      <<: *PaaS_color
+      icon: icons/RabbitMQ.png
+    tosca.nodes.Container.WebApplication:
+      <<: *SaaS_color
+    tosca.nodes.WebApplication.WordPress:
+      <<: *SaaS_color
+      icon: icons/Wordpress.png
+    tosca.nodes.Container.WebApplication.Wordpress:
+      <<: *SaaS_color
+      icon: icons/Wordpress.png
+    tosca.nodes.Container.Application.UserApp:
+      <<: *SaaS_color
+    tosca.nodes.Container.Application.AppWithVolume:
+      <<: *SaaS_color
+    tosca.nodes.WebServer.Apache:
+      <<: *PaaS_color
+      icon: icons/Apache.png
+    tosca.nodes.SoftwareComponent.PHP:
+      <<: *PaaS_color
+      icon: icons/php.png
+
+  kinds:
+    tosca.nodes.Compute: node
+    tosca.nodes.BlockStorage: database
+    tosca.nodes.Container.Runtime: node
+    tosca.nodes.Container.Database: database
+#    tosca.nodes.Container.Database.MySQL: database
+#    tosca.nodes.Container.Database.MongoDB: database
+    tosca.nodes.Database.WordpressDB: database
+    tosca.nodes.Container.Application.RabbitMQ: queue
+    tosca.nodes.Container.WebApplication: component
+    tosca.nodes.WebApplication.WordPress: component
+    tosca.nodes.Container.Application.UserApp: component
+    tosca.nodes.Container.Application.AppWithVolume: component
+    tosca.nodes.WebServer.Apache: node
+    tosca.nodes.SoftwareComponent.PHP: node
+
+# Logging configuration.
+logging:
+  loggers:
+    cloudnet.tosca.configuration:
+      level: WARNING
+    cloudnet.tosca.importers:
+      level: WARNING
+    cloudnet.tosca.processors:
+      level: WARNING
+    cloudnet.tosca.syntax:
+      level: WARNING
+    cloudnet.tosca.type_system:
+      level: WARNING
+    cloudnet.tosca.declarative_workflows:
+      level: WARNING
+    cloudnet.tosca.alloy:
+      level: WARNING
+    cloudnet.tosca.network_diagrams:
+      level: WARNING
+    cloudnet.tosca.tosca_diagrams:
+      level: WARNING
+    cloudnet.tosca.uml2_diagrams:
+      level: WARNING
+    cloudnet.tosca.hot:
+      level: WARNING
+  root:
+    level: WARNING
