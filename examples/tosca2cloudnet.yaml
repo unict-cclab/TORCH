@@ -101,6 +101,7 @@ UML2:
   kinds:
     tosca.nodes.Compute: node
     tosca.nodes.BlockStorage: database
+    tosca.nodes.DBMS: database
     tosca.nodes.Container.Runtime: node
     tosca.nodes.Container.Database: database
 #    tosca.nodes.Container.Database.MySQL: database
